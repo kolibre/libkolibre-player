@@ -1,0 +1,96 @@
+What is Kolibre Foundation?
+---------------------------------
+Kolibre Foundation is a nonprofit organization whose purpose is to promote
+information systems that aid people with reading disabilities. The software
+which Kolibre develops is published under open source and made available to all
+stakeholders at github.com/kolibre.
+
+Kolibre is committed to broad cooperation between organizations, businesses and
+individuals around the innovative development of custom information systems for
+people with different needs.
+
+
+History
+---------------------------------
+The software development started in 2002 by Norra Österbottens Svenska
+Synskadade r.f. who sought for a solution, togheter with Jakobstads Tidning
+(today Österbottens Tidning), to modernize the daily talking newsletter which
+then was distributed on tape. Since then, several projects have been carried out
+in conjunction with other partners i.e. Pratsam Ab to improve the software.
+
+The projects below has resulted in the software released as open source by the
+Kolibre Foundation. Without the aid from Finland's Slot Machine Association
+(RAY), who has been the main financier, these projects would never have been
+completed.
+
+  2003-2004:
+  Den Digitala Taltidningen, (Eng. The digital talking newspaper)
+
+  2005-2006:
+  Digital Service för Synskadade, (Eng. Digital Services For Visually Impaired)
+
+  2007-2008:
+  Ett tillgängligt informationssamhälle, (Eng. An Accessible Information Society)
+
+  2009-2012:
+  Hjälpmedel för jämställdhet, (Eng. Aids For Equality)
+
+
+What is Kolibre-player?
+---------------------------------
+Kolibre-player is a library for using gstreamer for playback of audio content
+such as mp3, ogg or wav. It provides necessary interface methods to open a
+selected segment of content from a file source or http source and to adjust the
+tempo, pitch and volume of the playback.
+
+Documentation
+---------------------------------
+This library is documented using doxygen.
+
+Write ./configure && make doxygen-doc to generate documentation.
+
+Where to start?
+---------------------------------
+If you are interested in the Kolibre organization, have a look the project home
+page http://www.kolibre.org. If you seek information how to contribute to this
+software or any of the other Kolibre open source modules, have a look at our
+github organizational page on http://www.github.com/kolibre or just send an
+email to dev@kolibre.org.
+
+
+Platforms
+---------------------------------
+Kolibre-player has been tested with Linux Debian Squeeze and can be built using
+dev packages from apt repositories.
+
+Dependencies
+---------------------------------
+Major dependencies of Kolibre-player:
+
+* glib-2.0
+* gsteramer-0.10
+* gstreamer0.10-plugins-base
+* gstreamer0.10-plugins-good
+* gstreamer0.10-plugins-bad
+* gstreamer0.10-plugins-ugly
+* gstreamer-controller
+* libxml2
+* libpthread
+* zlib
+* liblog4cxx
+* libboost-signals
+
+Installing from source tar balls
+---------------------------------
+Currently no binary packages of Kolibre-player are distributed. Therefore, the
+only way to use Kolibre-player is by installing the package from source tar
+balls.
+
+If all dependencies are available on your system, the package can be compiled
+using
+
+./configure
+make
+make install
+
+see INSTALL for detailed instructions.
