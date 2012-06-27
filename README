@@ -101,17 +101,20 @@ Major dependencies of Kolibre-player:
 * liblog4cxx
 * libboost-signals
 
-Installing from source tar balls
+Building from source 
 ---------------------------------
 Currently no binary packages of Kolibre-player are distributed. Therefore, the
-only way to use Kolibre-player is by installing the package from source tar
-balls.
+only way to use Kolibre-player is by building the package from source.
 
 If all dependencies are available on your system, the package can be compiled
 using
 
-./configure
-make
-make install
+If building from GIT sources, first do a:
+$ autoreconf -fi
+
+If building from a release tarball you can skip de above step. 
+$ ./configure
+$ make
+$ make install
 
 see INSTALL for detailed instructions.
