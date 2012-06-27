@@ -1561,6 +1561,13 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
     //g_object_set (pAudiosink, "max-lateness", (gint64)10 * GST_MSECOND, NULL); // no effect?
 #else
     pAudiosink = gst_element_factory_make("alsasink", "pAudiosink");
+    if (!pAudiosink){
+        LOG4CXX_ERROR(playerImplLog, "audiosink:      " << (pAudiosink ? "OK" : "failed"));
+        LOG4CXX_ERROR(playerImplLog, "Using fakesink as fallback");        
+        pAudiosink = gst_element_factory_make("fakesink", "pAudiosink");
+        g_object_set (pAudiosink, "sync", TRUE, NULL);
+    }
+
 #endif
     // Check that the elements got set up
     if (!pAudioconvert1 ||
