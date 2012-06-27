@@ -101,6 +101,31 @@ Major dependencies of Kolibre-player:
 * liblog4cxx
 * libboost-signals
 
+Gstreamer elements required for full functionality:
+---------------------------------
+alsasink
+audioamplify
+audioconvert
+cdparanoiasrc
+decodebin
+directsoundsink(windows only)
+faad
+fakesink(core)
+filesrc(core)
+flump3dec
+level
+oggdemux
+pipeline
+pitch
+queue(core)
+souphttpsrc
+vorbisdec
+wavparse
+
+Plugins and elements can be installed by installing the correct gst-plugin-package. 
+A list of plugins and their respective gst-plugin-package can be found at:
+http://gstreamer.freedesktop.org/documentation/plugins.html
+
 Building from source 
 ---------------------------------
 Currently no binary packages of Kolibre-player are distributed. Therefore, the
