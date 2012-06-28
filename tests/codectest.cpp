@@ -53,6 +53,7 @@ PlayerControl::PlayerControl():
 
 bool PlayerControl::playerMessageSlot( Player::playerMessage message )
 {
+    cout << "Got player message " << message << endl;
     switch (message)
     {
         case Player::PLAYER_CONTINUE:
@@ -67,6 +68,7 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
 
 bool PlayerControl::playerStateSlot( playerState state )
 {
+    cout << "Got player state " << state << endl;
     switch (state)
     {
         case INACTIVE:
@@ -85,7 +87,12 @@ void PlayerControl::play()
 {
     player->open( source );
     player->resume();
-    while (!atEOS) { sleep(1); }
+    int i;
+    for ( ; !atEOS && i < 50; i++ ) {
+        sleep(1);
+    }
+    //Assert that test run til end!
+    assert( i < 50 );
 }
 
 bool PlayerControl::enable( int argc, char **argv )

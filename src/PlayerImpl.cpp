@@ -2555,7 +2555,12 @@ void *player_thread(void *player)
             // Open a new file
             openNewFile = false;
             p->setRealState(GST_STATE_READY, GST_STATE_PAUSED);
-            p->setupPipeline();
+            if( p->setupPipeline() ){
+                 LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline, player thread exiting!");
+                 p->setState(EXITING);
+                 continue;
+            }
+
             if(p->mPlayingStartms != 0) bStartseek = true;
             averageFactor = 0.5;
             averageVolume = 1.0;
