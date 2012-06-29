@@ -128,12 +128,6 @@ http://gstreamer.freedesktop.org/documentation/plugins.html
 
 Building from source 
 ---------------------------------
-Currently no binary packages of Kolibre-player are distributed. Therefore, the
-only way to use Kolibre-player is by building the package from source.
-
-If all dependencies are available on your system, the package can be compiled
-using
-
 If building from GIT sources, first do a:
 $ autoreconf -fi
 
