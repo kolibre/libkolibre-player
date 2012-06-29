@@ -43,18 +43,19 @@ dnl  add a string (i.e -alpha or -beta or -rc1) to the
 dnl  package version in AC_INIT after $PATCH_VERSION
 dnl  e.g. [$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION-rc1]
 
+# Setup version here:
+m4_define([MAJOR_VERSION], [0])
+m4_define([MINOR_VERSION], [0])
+m4_define([PATCH_VERSION], [1])
+m4_define([EXTRA_VERSION], [])
+
 AC_PREREQ([2.67])
-AC_INIT([kolibre-player],[0.0.1],[BUG-REPORT-ADDRESS])
+AC_INIT([kolibre-player],[MAJOR_VERSION.MINOR_VERSION.PATCH_VERSION[]EXTRA_VERSION],[BUG-REPORT-ADDRESS])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([tar-pax])
 AC_CONFIG_HEADERS([config.h])
 
-# Setup version
-MAJOR_VERSION=0
-MINOR_VERSION=0
-PATCH_VERSION=1
-
-VERSION_INFO=`expr $MAJOR_VERSION + $MINOR_VERSION`:$PATCH_VERSION:$MINOR_VERSION
+VERSION_INFO=m4_eval(MAJOR_VERSION + MINOR_VERSION):PATCH_VERSION:MINOR_VERSION
 AC_SUBST(VERSION_INFO)
 
 # Checks for programs.
