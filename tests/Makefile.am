@@ -23,9 +23,15 @@ check_PROGRAMS = codectest \
 				 seektest \
 				 seek_on_continue
 
-TESTS = codectest.sh \
-		tempopitchtest.sh \
-		seektest.sh \
+TESTS = codectest_wav.sh \
+		codectest_ogg.sh \
+		codectest_mp3.sh \
+		tempopitchtest_wav.sh \
+		tempopitchtest_ogg.sh \
+		tempopitchtest_mp3.sh \
+		seektest_wav.sh \
+		seektest_ogg.sh \
+		seektest_mp3.sh \
 		seek_on_continue
 
 codectest_SOURCES = codectest.cpp
@@ -48,7 +54,13 @@ AM_CPPFLAGES = -I$(srcdir)/..$(all_includes)
 
 EXTRA_DIST = setup_logging.h \
 			 data.h \
-			 codectest.sh \
-			 tempopitchtest.sh \
-			 seektest.sh \
+			 codectest_wav.sh \
+			 codectest_ogg.sh \
+			 codectest_mp3.sh \
+			 tempopitchtest_wav.sh \
+			 tempopitchtest_ogg.sh \
+			 tempopitchtest_mp3.sh \
+			 seektest_wav.sh \
+			 seektest_ogg.sh \
+			 seektest_mp3.sh \
 			 testdata
