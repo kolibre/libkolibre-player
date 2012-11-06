@@ -1,6 +1,6 @@
-What is Kolibre Foundation?
+What is Kolibre?
 ---------------------------------
-Kolibre Foundation is a nonprofit organization whose purpose is to promote
+Kolibre is a Finnish non-profit association whose purpose is to promote
 information systems that aid people with reading disabilities. The software
 which Kolibre develops is published under open source and made available to all
 stakeholders at github.com/kolibre.
@@ -12,16 +12,15 @@ people with different needs.
 
 History
 ---------------------------------
-The software development started in 2002 by Norra Österbottens Svenska
-Synskadade r.f. who sought for a solution, togheter with Jakobstads Tidning
-(today Österbottens Tidning), to modernize the daily talking newsletter which
-then was distributed on tape. Since then, several projects have been carried out
-in conjunction with other partners i.e. Pratsam Ab to improve the software.
+The software development started in 2002 by Norra Österbottens Svenska 
+Synskadade rf (NÖSS), a Finnish non-profit contact, interest and service 
+organization for visually impaired. NÖSS sought for a solution together with 
+Jakobstads Tidning (today Österbottens Tidning)to modernize the daily talking 
+newspaper which back then was distributed by tape.
 
-The projects below has resulted in the software released as open source by the
-Kolibre Foundation. Without the aid from Finland's Slot Machine Association
-(RAY), who has been the main financier, these projects would never have been
-completed.
+Since then several projects, mainly funded by the Finnish Slot Machine 
+Association, have been carried out in conjunction with other partners (i.e. 
+Pratsam Ab) to improve and further develop the software for different needs:
 
   2003-2004:
   Den Digitala Taltidningen, (Eng. The digital talking newspaper)
@@ -46,7 +45,7 @@ tempo, pitch and volume of the playback.
 
 Licensing
 ---------------------------------
-Copyright (C) 2012  The Kolibre Foundation
+Copyright (C) 2012 Kolibre
 
 This file is part of kolibre-player.
 
@@ -72,7 +71,7 @@ Write ./configure && make doxygen-doc to generate documentation.
 
 Where to start?
 ---------------------------------
-If you are interested in the Kolibre organization, have a look the project home
+If you are interested in the Kolibre organization, have a look at the project home
 page http://www.kolibre.org. If you seek information how to contribute to this
 software or any of the other Kolibre open source modules, have a look at our
 github organizational page on http://www.github.com/kolibre or just send an

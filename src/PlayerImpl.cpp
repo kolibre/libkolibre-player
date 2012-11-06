@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012  The Kolibre Foundation
+Copyright (C) 2012 Kolibre
 
 This file is part of kolibre-player.
 
@@ -66,6 +66,7 @@ std::string string_format(const std::string &fmt, ...)
         else
             size*=2;
     }
+    return str;
 }
 
 #define TIME_FORMAT "u:%02u:%02u.%03u"
@@ -906,7 +907,7 @@ bool PlayerImpl::loadTrackData()
 
         format = GST_FORMAT_TIME;
 
-        if(gst_element_query_duration (cddasrc, &format, &duration));
+        if(gst_element_query_duration (cddasrc, &format, &duration)){};
         LOG4CXX_DEBUG(playerImplLog, "Track " << track << " - " << TIME_STR(duration));
         vTracks.push_back(duration / GST_MSECOND);
     }

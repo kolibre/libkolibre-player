@@ -1,4 +1,4 @@
-## Copyright (C) 2012  The Kolibre Foundation
+## Copyright (C) 2012 Kolibre
 #
 # This file is part of kolibre-player.
 #

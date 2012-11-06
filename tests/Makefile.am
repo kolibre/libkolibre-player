@@ -1,4 +1,4 @@
-## Copyright (C) 2012  The Kolibre Foundation
+## Copyright (C) 2012 Kolibre
 #
 # This file is part of kolibre-player.
 #
@@ -36,21 +36,21 @@ TESTS = codectest_wav.sh \
 
 codectest_SOURCES = codectest.cpp
 codectest_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-codectest_CPPFLAGS = -I$(top_srcdir)/src @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
+codectest_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
 
 tempopitchtest_SOURCES = tempopitchtest.cpp
 tempopitchtest_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-tempopitchtest_CPPFLAGS = -I$(top_srcdir)/src @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
+tempopitchtest_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
 
 seektest_SOURCES = seektest.cpp
 seektest_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-seektest_CPPFLAGS = -I$(top_srcdir)/src @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
+seektest_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
 
 seek_on_continue_SOURCES = seek_on_continue_data.cpp seek_on_continue.cpp
 seek_on_continue_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-seek_on_continue_CPPFLAGS = -I$(top_srcdir)/src @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
+seek_on_continue_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
 
-AM_CPPFLAGES = -I$(srcdir)/..$(all_includes)
+AM_CPPFLAGS = -I$(srcdir)/..$(all_includes)
 
 EXTRA_DIST = setup_logging.h \
 			 data.h \
