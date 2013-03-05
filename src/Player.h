@@ -35,11 +35,11 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 
 // Limits
 #define PLAYER_MIN_TEMPO 0.5
-#define PLAYER_MAX_TEMPO 1.5
+#define PLAYER_MAX_TEMPO 2.0
 #define PLAYER_MIN_PITCH 0.5
-#define PLAYER_MAX_PITCH 1.5
+#define PLAYER_MAX_PITCH 2.0
 #define PLAYER_MIN_VOLUMEGAIN 0.5
-#define PLAYER_MAX_VOLUMEGAIN 1.5
+#define PLAYER_MAX_VOLUMEGAIN 2.0
 #define PLAYER_MIN_BASS -0.5
 #define PLAYER_MAX_BASS 0.5
 #define PLAYER_MIN_TREBLE -0.5
