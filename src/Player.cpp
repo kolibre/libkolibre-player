@@ -363,7 +363,7 @@ double Player::getTempo()
 /**
  * Set the playback tempo
  *
- * @param value tempo (between MAX_TEMPO and MIN_TEMPO)
+ * @param value tempo (between PLAYER_MAX_TEMPO and PLAYER_MIN_TEMPO)
  */
 void Player::setTempo(double value)
 {
@@ -393,7 +393,7 @@ double Player::getPitch()
 /**
  * Set the playback pitch
  *
- * @param value pitch (between MAX_PITCH and MIN_PITCH)
+ * @param value pitch (between PLAYER_MAX_PITCH and PLAYER_MIN_PITCH)
  */
 void Player::setPitch(double value)
 {
@@ -423,7 +423,7 @@ double Player::getVolumeGain()
 /**
  * Set the playback volumegain
  *
- * @param value volumegain (between MAX_VOLUMEGAIN and MIN_VOLUMEGAIN)
+ * @param value volumegain (between PLAYER_MAX_VOLUMEGAIN and PLAYER_MIN_VOLUMEGAIN)
  */
 void Player::setVolumeGain(double value)
 {
@@ -453,7 +453,7 @@ double Player::getTreble()
 /**
  * Set the playback treble
  *
- * @param value treble (between MAX_TREBLE and MIN_TREBLE)
+ * @param value treble (between PLAYER_MAX_TREBLE and PLAYER_MIN_TREBLE)
  */
 void Player::setTreble(double value)
 {
@@ -483,7 +483,7 @@ double Player::getBass()
 /**
  * Set the playback bass
  *
- * @param value bass (between MAX_BASS and MIN_BASS)
+ * @param value bass (between PLAYER_MAX_BASS and PLAYER_MIN_BASS)
  */
 void Player::setBass(double value)
 {

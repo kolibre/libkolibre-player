@@ -962,12 +962,12 @@ double PlayerImpl::getTempo()
 /**
  * Set the playback tempo
  *
- * @param value tempo (between MAX_TEMPO and MIN_TEMPO)
+ * @param value tempo (between PLAYER_MAX_TEMPO and PLAYER_MIN_TEMPO)
  */
 void PlayerImpl::setTempo(double value)
 {
-    if(value <= MIN_TEMPO) value = MIN_TEMPO;
-    if(value >= MAX_TEMPO) value = MAX_TEMPO;
+    if(value <= PLAYER_MIN_TEMPO) value = PLAYER_MIN_TEMPO;
+    if(value >= PLAYER_MAX_TEMPO) value = PLAYER_MAX_TEMPO;
     lockMutex(dataMutex);
     mTempo = value;
     unlockMutex(dataMutex);
@@ -1016,12 +1016,12 @@ double PlayerImpl::getPitch()
 /**
  * Set the playback pitch
  *
- * @param value pitch (between MAX_PITCH and MIN_PITCH)
+ * @param value pitch (between PLAYER_MAX_PITCH and PLAYER_MIN_PITCH)
  */
 void PlayerImpl::setPitch(double value)
 {
-    if(value <= MIN_PITCH) value = MIN_PITCH;
-    if(value >= MAX_PITCH) value = MAX_PITCH;
+    if(value <= PLAYER_MIN_PITCH) value = PLAYER_MIN_PITCH;
+    if(value >= PLAYER_MAX_PITCH) value = PLAYER_MAX_PITCH;
     lockMutex(dataMutex);
     mPitch = value;
     unlockMutex(dataMutex);
@@ -1070,12 +1070,12 @@ double PlayerImpl::getVolumeGain()
 /**
  * Set the playback volumegain
  *
- * @param value volumegain (between MAX_VOLUMEGAIN and MIN_VOLUMEGAIN)
+ * @param value volumegain (between PLAYER_MAX_VOLUMEGAIN and PLAYER_MIN_VOLUMEGAIN)
  */
 void PlayerImpl::setVolumeGain(double value)
 {
-    if(value <= MIN_VOLUMEGAIN) value = MIN_VOLUMEGAIN;
-    if(value >= MAX_VOLUMEGAIN) value = MAX_VOLUMEGAIN;
+    if(value <= PLAYER_MIN_VOLUMEGAIN) value = PLAYER_MIN_VOLUMEGAIN;
+    if(value >= PLAYER_MAX_VOLUMEGAIN) value = PLAYER_MAX_VOLUMEGAIN;
     lockMutex(dataMutex);
     mVolumeGain = value;
     unlockMutex(dataMutex);
@@ -1124,12 +1124,12 @@ double PlayerImpl::getTreble()
 /**
  * Set the playback treble
  *
- * @param value treble (between MAX_TREBLE and MIN_TREBLE)
+ * @param value treble (between PLAYER_MAX_TREBLE and PLAYER_MIN_TREBLE)
  */
 void PlayerImpl::setTreble(double value)
 {
-    if(value <= MIN_TREBLE) value = MIN_TREBLE;
-    if(value >= MAX_TREBLE) value = MAX_TREBLE;
+    if(value <= PLAYER_MIN_TREBLE) value = PLAYER_MIN_TREBLE;
+    if(value >= PLAYER_MAX_TREBLE) value = PLAYER_MAX_TREBLE;
     lockMutex(dataMutex);
     mTreble = value;
     unlockMutex(dataMutex);
@@ -1178,12 +1178,12 @@ double PlayerImpl::getBass()
 /**
  * Set the playback bass
  *
- * @param value bass (between MAX_BASS and MIN_BASS)
+ * @param value bass (between PLAYER_MAX_BASS and PLAYER_MIN_BASS)
  */
 void PlayerImpl::setBass(double value)
 {
-    if(value <= MIN_BASS) value = MIN_BASS;
-    if(value >= MAX_BASS) value = MAX_BASS;
+    if(value <= PLAYER_MIN_BASS) value = PLAYER_MIN_BASS;
+    if(value >= PLAYER_MAX_BASS) value = PLAYER_MAX_BASS;
     lockMutex(dataMutex);
     mBass = value;
     unlockMutex(dataMutex);

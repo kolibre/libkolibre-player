@@ -34,16 +34,16 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 #define ENABLE_FADEIN
 
 // Limits
-#define MIN_TEMPO 0.5
-#define MAX_TEMPO 1.5
-#define MIN_PITCH 0.5
-#define MAX_PITCH 1.5
-#define MIN_VOLUMEGAIN 0.5
-#define MAX_VOLUMEGAIN 1.5
-#define MIN_BASS -0.5
-#define MAX_BASS 0.5
-#define MIN_TREBLE -0.5
-#define MAX_TREBLE 0.5
+#define PLAYER_MIN_TEMPO 0.5
+#define PLAYER_MAX_TEMPO 1.5
+#define PLAYER_MIN_PITCH 0.5
+#define PLAYER_MAX_PITCH 1.5
+#define PLAYER_MIN_VOLUMEGAIN 0.5
+#define PLAYER_MAX_VOLUMEGAIN 1.5
+#define PLAYER_MIN_BASS -0.5
+#define PLAYER_MAX_BASS 0.5
+#define PLAYER_MIN_TREBLE -0.5
+#define PLAYER_MAX_TREBLE 0.5
 
 struct PlayerImpl;
 
