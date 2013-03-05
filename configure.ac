@@ -97,7 +97,7 @@ dnl -----------------------------------------------
 PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.0, HAVE_GLIB=yes, HAVE_GLIB=no)
 
 if (test "x$HAVE_GLIB" = "xno") then
-    AC_MSG_ERROR([**glib >= 2.0 is needed to build libkolibre-player **])
+    AC_MSG_ERROR([**libglib >= 2.0 is needed to build libkolibre-player **])
 fi
 
 AC_SUBST(GLIB_FLAGS)
