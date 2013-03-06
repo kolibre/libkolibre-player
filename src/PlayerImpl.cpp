@@ -970,13 +970,18 @@ void PlayerImpl::setTempo(double value)
     if(value >= PLAYER_MAX_TEMPO) value = PLAYER_MAX_TEMPO;
     lockMutex(dataMutex);
     mTempo = value;
+    mPlayingTempo = value;
     unlockMutex(dataMutex);
 
     switch(getState())
     {
         case PAUSING:
         case PLAYING:
-            LOG4CXX_INFO(playerImplLog, "setting tempo to: " << value);
+            if(pPitch != NULL)
+            {
+                LOG4CXX_INFO(playerImplLog, "setting tempo to: " << value);
+                g_object_set(pPitch, "tempo", value, NULL);
+            }
             break;
         default:
             break;
