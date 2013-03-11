@@ -381,9 +381,9 @@ string PlayerImpl::getState_str()
  *
  * @param slot function pointer
  */
-void PlayerImpl::doOnPlayerMessage(Player::OnPlayerMessage::slot_type slot)
+boost::signals2::connection PlayerImpl::doOnPlayerMessage(Player::OnPlayerMessage::slot_type slot)
 {
-    onPlayerMessage.connect(slot);
+    return onPlayerMessage.connect(slot);
 }
 
 /**
@@ -391,9 +391,9 @@ void PlayerImpl::doOnPlayerMessage(Player::OnPlayerMessage::slot_type slot)
  *
  * @param slot function pointer
  */
-void PlayerImpl::doOnPlayerState(Player::OnPlayerState::slot_type slot)
+boost::signals2::connection PlayerImpl::doOnPlayerState(Player::OnPlayerState::slot_type slot)
 {
-    onPlayerState.connect(slot);
+    return onPlayerState.connect(slot);
 }
 
 /**
@@ -401,9 +401,9 @@ void PlayerImpl::doOnPlayerState(Player::OnPlayerState::slot_type slot)
  *
  * @param slot function pointer
  */
-void PlayerImpl::doOnPlayerTime(Player::OnPlayerTime::slot_type slot)
+boost::signals2::connection PlayerImpl::doOnPlayerTime(Player::OnPlayerTime::slot_type slot)
 {
-    onPlayerTime.connect(slot);
+    return onPlayerTime.connect(slot);
 }
 
 /**

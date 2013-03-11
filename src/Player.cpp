@@ -122,30 +122,36 @@ string Player::getState_str()
  * Set the a signal slot for when current file has problem buffering
  *
  * @param slot function pointer to the slot
+ *
+ * @return connection object for the message reporting signal-slot connection
  */
-void Player::doOnPlayerMessage(OnPlayerMessage::slot_type slot)
+boost::signals2::connection Player::doOnPlayerMessage(OnPlayerMessage::slot_type slot)
 {
-    p_impl->doOnPlayerMessage(slot);
+    return p_impl->doOnPlayerMessage(slot);
 }
 
 /**
  * Set the a signal slot for when player state changes
  *
  * @param slot function pointer to the slot
+ *
+ * @return connection object for the state reporting signal-slot connection
  */
-void Player::doOnPlayerState(OnPlayerState::slot_type slot)
+boost::signals2::connection Player::doOnPlayerState(OnPlayerState::slot_type slot)
 {
-    p_impl->doOnPlayerState(slot);
+    return p_impl->doOnPlayerState(slot);
 }
 
 /**
  * Set the a signal slot for when player time changes
  *
  * @param slot function pointer to the slot
+ *
+ * @return connection object for the time reporting signal-slot connection
  */
-void Player::doOnPlayerTime(OnPlayerTime::slot_type slot)
+boost::signals2::connection Player::doOnPlayerTime(OnPlayerTime::slot_type slot)
 {
-    p_impl->doOnPlayerTime(slot);
+    return p_impl->doOnPlayerTime(slot);
 }
 
 /**

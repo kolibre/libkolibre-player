@@ -88,9 +88,9 @@ struct PlayerImpl
 
     bool isPlaying();
 
-    void doOnPlayerMessage(Player::OnPlayerMessage::slot_type slot);
-    void doOnPlayerState(Player::OnPlayerState::slot_type slot);
-    void doOnPlayerTime(Player::OnPlayerTime::slot_type slot);
+    boost::signals2::connection doOnPlayerMessage(Player::OnPlayerMessage::slot_type slot);
+    boost::signals2::connection doOnPlayerState(Player::OnPlayerState::slot_type slot);
+    boost::signals2::connection doOnPlayerTime(Player::OnPlayerTime::slot_type slot);
 
 
     // PRIVATE

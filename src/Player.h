@@ -122,9 +122,9 @@ class Player
         typedef boost::signals2::signal<bool (playerState)> OnPlayerState;
         typedef boost::signals2::signal<bool (timeData)> OnPlayerTime;
 
-        void doOnPlayerMessage(OnPlayerMessage::slot_type slot);
-        void doOnPlayerState(OnPlayerState::slot_type slot);
-        void doOnPlayerTime(OnPlayerTime::slot_type slot);
+        boost::signals2::connection doOnPlayerMessage(OnPlayerMessage::slot_type slot);
+        boost::signals2::connection doOnPlayerState(OnPlayerState::slot_type slot);
+        boost::signals2::connection doOnPlayerTime(OnPlayerTime::slot_type slot);
         bool isPlaying();
 
         Player();
