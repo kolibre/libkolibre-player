@@ -35,22 +35,13 @@ TESTS = codectest_wav.sh \
 		seek_on_continue
 
 codectest_SOURCES = codectest.cpp
-codectest_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-codectest_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
-
 tempopitchtest_SOURCES = tempopitchtest.cpp
-tempopitchtest_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-tempopitchtest_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
-
 seektest_SOURCES = seektest.cpp
-seektest_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-seektest_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
-
 seek_on_continue_SOURCES = seek_on_continue_data.cpp seek_on_continue.cpp
-seek_on_continue_LDADD = -L$(top_builddir)/src -lkolibre-player @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
-seek_on_continue_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@
 
-AM_CPPFLAGS = -I$(srcdir)/..$(all_includes)
+LDADD = -lkolibre-player
+AM_LDFLAGS = -L$(top_builddir)/src @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
+AM_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@ -I$(top_srcdir)/src
 
 EXTRA_DIST = setup_logging.h \
 			 data.h \
