@@ -86,14 +86,14 @@ void PlayerControl::play()
     player->open( source );
     player->resume();
 
-    sleep(2);
+    sleep(1);
     assert(!atEOS);
 
     player->setPitch(1.2);
     player->pause();
     player->resume();
     assert(player->getPitch() == 1.2);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -101,15 +101,15 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getPitch() == 1.5);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
     player->setPitch(20.0);
     player->pause();
     player->resume();
-    assert(player->getPitch() == 1.5);
-    sleep(2);
+    assert(player->getPitch() == PLAYER_MAX_PITCH);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -117,7 +117,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getPitch() == 1.0);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -125,7 +125,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.1);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -133,7 +133,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.2);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -141,7 +141,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.3);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -149,7 +149,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.4);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -157,15 +157,15 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.5);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
     player->setTempo(220.0);
     player->pause();
     player->resume();
-    assert(player->getTempo()==1.5);
-    sleep(2);
+    assert(player->getTempo()==PLAYER_MAX_TEMPO);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -173,7 +173,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.0);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -181,7 +181,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==0.5);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -189,7 +189,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==0.7);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -198,7 +198,7 @@ void PlayerControl::play()
     player->pause();
     player->resume();
     assert(player->getTempo()==1.0);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -208,7 +208,7 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==1.5);
     assert(player->getPitch()==1.5);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -218,7 +218,7 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==1.2);
     assert(player->getPitch()==1.2);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -226,9 +226,9 @@ void PlayerControl::play()
     player->setPitch(1.6);
     player->pause();
     player->resume();
-    assert(player->getTempo()==1.5);
-    assert(player->getPitch()==1.5);
-    sleep(2);
+    assert(player->getTempo()==1.6);
+    assert(player->getPitch()==1.6);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -238,7 +238,7 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==0.6);
     assert(player->getPitch()==0.6);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -248,7 +248,7 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==1.0);
     assert(player->getPitch()==1.0);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -258,7 +258,7 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==0.5);
     assert(player->getPitch()==1.5);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -268,7 +268,7 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==1.5);
     assert(player->getPitch()==0.5);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
 
@@ -278,9 +278,11 @@ void PlayerControl::play()
     player->resume();
     assert(player->getTempo()==1.0);
     assert(player->getPitch()==1.0);
-    sleep(2);
+    sleep(1);
     assert(player->isPlaying());
     assert(!atEOS);
+
+    player->stop();
 }
 
 bool PlayerControl::enable( int argc, char **argv )
@@ -307,4 +309,6 @@ int main(int argc, char *argv[])
     playerControl.enable(argc, argv);
 
     playerControl.play();
+
+    return 0;
 }
