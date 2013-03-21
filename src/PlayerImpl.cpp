@@ -685,21 +685,18 @@ void PlayerImpl::pause()
  */
 void PlayerImpl::resume()
 {
+    LOG4CXX_INFO(playerImplLog, "resuming playback...");
     playerState state = getState();
 
     switch(state)
     {
         case STOPPED:
-            //if navigating in level h1-h6 the reader will be set to stop while loading. In cases where the narrator
-            //finishes before the next hX have been loaded the player will be in stopped state and not continue automatically
             LOG4CXX_DEBUG(playerImplLog, "Player in " << strState(state) << " state, Ready to continue playback");
             setState(PLAYING);
             break;
         case PAUSING:
+            LOG4CXX_DEBUG(playerImplLog, "Player in " << strState(state) << " state, Ready to continue playback");
             setState(PLAYING);
-            //for(int c = 0; c < 10; c++)
-            //if(getRealState() == PLAYING) break;
-            //else usleep(100000);
             break;
         default:
             if(state != PLAYING)
