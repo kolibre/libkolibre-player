@@ -47,26 +47,39 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 #define levelPeakttl 1000 * GST_MSECOND
 #define levelPeakfalloff 0.5
 
-// convenience function for building strings with sprintf like syntax
-// e.g. std::string foo = string_format("%d is larger than %d", 3, 2);
-std::string string_format(const std::string &fmt, ...)
+// helper function to build a clock string from a GstClockTime object
+std::string gst_time_string(GstClockTime gstClockTime)
 {
-    int n, size=100;
-    std::string str;
-    va_list ap;
-    while (1) {
-        str.resize(size);
-        va_start(ap, fmt);
-        int n = vsnprintf((char *)str.c_str(), size, fmt.c_str(), ap);
-        va_end(ap);
-        if (n > -1 && n < size)
-            return str;
-        if (n > -1)
-            size=n+1;
-        else
-            size*=2;
-    }
-    return str;
+    if (not GST_CLOCK_TIME_IS_VALID (gstClockTime))
+        return "99:99:99.999";
+
+    // build a time string from the received clock time
+    std::ostringstream oss;
+
+    // hours
+    int hours = gstClockTime / (GST_SECOND * 60 * 60);
+    oss << hours;
+    oss << ":";
+
+    //minutes
+    int minutes = (gstClockTime / (GST_SECOND * 60)) % 60;
+    if (minutes < 10) oss << "0";
+    oss << minutes;
+    oss << ":";
+
+    // seconds
+    int seconds = (gstClockTime / (GST_SECOND)) % 60;
+    if (seconds < 10) oss << "0";
+    oss << seconds;
+    oss << ".";
+
+    // mseconds
+    int mseconds = (gstClockTime / (GST_MSECOND)) % 1000;
+    if (mseconds < 10) oss << "00";
+    else if (mseconds < 100) oss << "0";
+    oss << mseconds;
+
+    return oss.str();
 }
 
 #define TIME_FORMAT "u:%02u:%02u.%03u"
@@ -81,7 +94,7 @@ GST_CLOCK_TIME_IS_VALID (t) ? \
 GST_CLOCK_TIME_IS_VALID (t) ? \
 (guint) (((GstClockTime)(t)) / GST_MSECOND % 1000) : 999
 
-#define TIME_STR(t) string_format("%"TIME_FORMAT, TIME_ARGS(t))
+#define TIME_STR(t) gst_time_string(t)
 
 // create a logger which will become a child to logger kolibre.player
 log4cxx::LoggerPtr playerImplLog(log4cxx::Logger::getLogger("kolibre.player.playerimpl"));
