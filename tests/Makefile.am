@@ -55,3 +55,9 @@ EXTRA_DIST = setup_logging.h \
 			 seektest_ogg.sh \
 			 seektest_mp3.sh \
 			 testdata
+
+clean-local: clean-local-check
+.PHONY: clean-local-check
+
+clean-local-check:
+	rm -f *.log
