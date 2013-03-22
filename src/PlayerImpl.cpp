@@ -1320,11 +1320,11 @@ gboolean cb_data_probe (GstPad *pad, GstBuffer *buffer, gpointer player_object)
 
     if(p->mPlayingms < p->mPlayingStartms-FADEIN_MS && p->mPlayingms + 5000 > p->mPlayingStartms) {
         p->unlockMutex(p->dataMutex);
-        //LOG4CXX_WARN(playerImpleLog, "Skipping buffer " << TIME_STR(buffer->timestamp) <<  " -> " << TIME_STR(buffer->timestamp+buffer->duration));
+        LOG4CXX_DEBUG(playerImplLog, "Skipping buffer " << TIME_STR(buffer->timestamp) <<  " -> " << TIME_STR(buffer->timestamp+buffer->duration));
         skippedlength += buffer->duration;
         return FALSE;
     } else if(skippedlength > 0) {
-        LOG4CXX_INFO(playerImplLog, "Skipped seekmargin " << TIME_STR(skippedlength));
+        LOG4CXX_DEBUG(playerImplLog, "Skipped seek margin " << TIME_STR(skippedlength));
         skippedlength = 0;
     }
 
