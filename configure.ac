@@ -63,9 +63,6 @@ LT_INIT
 AC_LANG([C++])
 AC_PROG_CXX
 AC_PROG_CC
-AX_BOOST_BASE
-AC_CHECK_DECL([HAVE_BOOST], [], [AC_MSG_ERROR([**autoconf-archive is needed to build libkolibre-player])])
-AX_BOOST_SIGNALS
 ACX_PTHREAD
 
 dnl -----------------------------------------------
@@ -78,14 +75,18 @@ DX_PDF_FEATURE(ON)
 DX_INIT_DOXYGEN([libkolibre-player], doxygen.cfg, [doxygen-doc])
 
 dnl -----------------------------------------------
+dnl check for boost libraries
+dnl -----------------------------------------------
+
+AX_BOOST_BASE
+AX_BOOST_SIGNALS
+AC_CHECK_DECL([HAVE_BOOST_SIGNALS], [], [AC_MSG_ERROR([Library requirement (Boost::Signals) were not met])])
+
+dnl -----------------------------------------------
 dnl check for log4cxx
 dnl -----------------------------------------------
 
-PKG_CHECK_MODULES(LOG4CXX, liblog4cxx >= 0.10.0, HAVE_LOG4CXX=yes, HAVE_LOG4CXX=no)
-
-if (test "x$HAVE_LOG4CXX" = "xno") then
-    AC_MSG_ERROR([**liblog4cxx >= 0.10.0 is needed to build libkolibre-player **])
-fi
+PKG_CHECK_MODULES(LOG4CXX, liblog4cxx >= 0.10.0)
 
 AC_SUBST(LOG4CXX_CFLAGS)
 AC_SUBST(LOG4CXX_LIBS)
@@ -94,11 +95,7 @@ dnl -----------------------------------------------
 dnl check for glib
 dnl -----------------------------------------------
 
-PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.0, HAVE_GLIB=yes, HAVE_GLIB=no)
-
-if (test "x$HAVE_GLIB" = "xno") then
-    AC_MSG_ERROR([**libglib >= 2.0 is needed to build libkolibre-player **])
-fi
+PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.0)
 
 AC_SUBST(GLIB_FLAGS)
 AC_SUBST(GLIB_LIBS)
@@ -107,11 +104,7 @@ dnl -----------------------------------------------
 dnl check for gstreamer
 dnl -----------------------------------------------
 
-PKG_CHECK_MODULES(GST, gstreamer-0.10 >= 0.10.0, HAVE_GST=yes, HAVE_GST=no)
-
-if (test "x$HAVE_GST" = "xno") then
-    AC_MSG_ERROR([**gstreamer >= 0.10.0 is needed to build libkolibre-player **])
-fi
+PKG_CHECK_MODULES(GST, gstreamer-0.10 >= 0.10.0)
 
 AC_SUBST(GST_CFLAGS)
 AC_SUBST(GST_LIBS)
@@ -120,11 +113,7 @@ dnl -----------------------------------------------
 dnl check for gstreamer-controller
 dnl -----------------------------------------------
 
-PKG_CHECK_MODULES(GSTCONTROLLER, gstreamer-controller-0.10 >= 0.10.0, HAVE_GSTCONTROLLER=yes, HAVE_GSTCONTROLLER=no)
-
-if (test "x$HAVE_GSTCONTROLLER" = "xno") then
-    AC_MSG_ERROR([**gstreamer-controller >= 0.10.0 is needed to build libkolibre-player **])
-fi
+PKG_CHECK_MODULES(GSTCONTROLLER, gstreamer-controller-0.10 >= 0.10.0)
 
 AC_SUBST(GSTCONTROLLER_CFLAGS)
 AC_SUBST(GSTCONTROLLER_LIBS)
