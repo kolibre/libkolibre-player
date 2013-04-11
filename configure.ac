@@ -130,7 +130,6 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([floor localeconv pow strdup strstr])
 
 AC_CONFIG_FILES([Makefile
-                 doxygen.cfg
                  libkolibre-player.pc
                  src/Makefile
                  tests/Makefile])
