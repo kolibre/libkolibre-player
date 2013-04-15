@@ -26,6 +26,6 @@ library_include_HEADERS = Player.h PlayerState.h
 libkolibre_player_la_SOURCES = Player.cpp PlayerImpl.cpp PlayerPosition.cpp
 libkolibre_player_la_LIBADD = @LOG4CXX_LIBS@ @GLIB_LIBS@ @GST_LIBS@ @PTHREAD_LIBS@
 libkolibre_player_la_LDFLAGS = -version-info $(VERSION_INFO)
-libkolibre_player_la_CPPFLAGS= @LOG4CXX_LIBS@ @GLIB_CFLAGS@ @GST_CFLAGS@ @BOOST_CPPFLAGS@ @PTHREAD_CFLAGS@
+libkolibre_player_la_CPPFLAGS= @LOG4CXX_LIBS@ @GLIB_CFLAGS@ @GST_CFLAGS@ @PTHREAD_CFLAGS@
 
 EXTRA_DIST = PlayerImpl.h SmilTime.h PlayerPosition.h
