@@ -605,7 +605,7 @@ void PlayerImpl::seekPos(long long int seektime)
 
                 LOG4CXX_INFO(playerImplLog, "Seeking to " << seektime << " ms (" << c_seektime << ")");
 
-                if (!gst_element_seek_simple (pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                if (!gst_element_seek_simple (pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                 {
                     LOG4CXX_ERROR(playerImplLog, "Seek to " << seektime << " in '" << filename << "' failed");
                     return;
@@ -2643,7 +2643,7 @@ void *player_thread(void *player)
 
                                     p->unlockMutex(p->dataMutex);
 
-                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                                     {
                                         LOG4CXX_ERROR(playerImplLog, "Seek failed");
                                     }
@@ -2677,7 +2677,7 @@ void *player_thread(void *player)
 
                                     p->unlockMutex(p->dataMutex);
 
-                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                                     {
                                         LOG4CXX_ERROR(playerImplLog, "Seek failed");
                                     }
@@ -3060,7 +3060,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                             p->bStartseek = false;
                             p->unlockMutex(p->dataMutex);
 
-                            if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                            if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                             {
                                 LOG4CXX_ERROR(playerImplLog, "Seek failed");
                             }
