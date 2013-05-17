@@ -2985,7 +2985,8 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                                 // Call EOS callback
                                 p->sendEOSSignal();
                             }
-                        } else {
+                            p->mOpenRetries--;
+                        } else if(retries > 0) {
                             // Call the buffering callback, set state to paused
                             if(p->sendBUFFERINGSignal() && filename != "reopening") {
 
