@@ -2809,87 +2809,74 @@ void *player_thread(void *player)
             }
         }
 
-        GstFormat fmt = GST_FORMAT_TIME;
 
-        if(GST_IS_ELEMENT(p->pPipeline) && (state == PLAYING || state == PAUSING) && //) {
-            //if (
-            gst_element_query_position (p->pPipeline, &fmt, &p->position)
-                //&& gst_element_query_duration (p->pPipeline, &fmt, &p->duration)
-                ) {
-                    //g_print ("\rTime: %" TIME_FORMAT " / %" TIME_FORMAT ,
-                    //             TIME_ARGS (pos), TIME_ARGS (len));
-                    p->lockMutex(p->dataMutex);
-                    //cerr << "Pos: " << (p->position * p->mPlayingTempo) / GST_MSECOND << "(" << p->mPlayingms << ") / "
-                    //         << (p->duration * p->mPlayingTempo) / GST_MSECOND << " @ " << currentVolume << "       \r" << flush;
+        if (GST_IS_ELEMENT(p->pPipeline) && (state == PLAYING || state == PAUSING))
+        {
+            p->lockMutex(p->dataMutex);
+            bool updatePosition = true;
+            GstFormat fmt = GST_FORMAT_TIME;
 
-                    //double amplify = 0.0;
-                    //g_object_get(G_OBJECT(p->pAmplify),"amplification",&amplify,NULL);
+            LOG4CXX_TRACE(playerImplLog, "Querying stream position");
+            if (!gst_element_query_position (p->pPipeline, &fmt, &p->position))
+            {
+                LOG4CXX_WARN(playerImplLog, "Position query faild");
+                updatePosition = false;
+            }
 
-                    if(lastPosms != p->position / 100) {
-                        Player::timeData td;
-                        // Scale current position and duration according to currentTempo
-                        td.current = (double(p->position) * currentTempo) / GST_MSECOND;
-                        td.duration = (double(p->duration) * currentTempo) / GST_MSECOND;
-                        td.segmentstart = p->mPlayingStartms;
-                        td.segmentstop = p->mPlayingStopms;
-                        p->onPlayerTime(td);
-                        lastPosms = p->position / 100;
-                    }
+            LOG4CXX_TRACE(playerImplLog, "Querying stream duration");
+            if (!gst_element_query_duration (p->pPipeline, &fmt, &p->duration))
+            {
+                LOG4CXX_WARN(playerImplLog, "Duration query faild");
+                updatePosition = false;
+            }
+
+            if (updatePosition)
+            {
+                if (lastPosms != p->position / 100)
+                {
+                    Player::timeData td;
+                    // Scale current position and duration according to currentTempo
+                    td.current = (double(p->position) * currentTempo) / GST_MSECOND;
+                    td.duration = (double(p->duration) * currentTempo) / GST_MSECOND;
+                    td.segmentstart = p->mPlayingStartms;
+                    td.segmentstop = p->mPlayingStopms;
+                    p->onPlayerTime(td);
+                    lastPosms = p->position / 100;
+                }
 
 #ifdef WIN32
-                    /*
-                    printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
-                            "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") %s:%2.2f\r",
-                            p->shortstrState(p->getRealState()).c_str(),
-                            p->shortstrState(state).c_str(),
-                            TIME_ARGS((gint64) (p->position)),
-                            TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
-                            TIME_ARGS((gint64) (p->duration)),
-                            TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
-                            (averageFactor > 0.01) ? "Vc" : "V",
-                            p->mPlayingVolume,
-                            currentdB
-                            );
-                    */
-#else
-                    printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
-                            "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") (%s:%2.2f D:%2.2f)           \r",
-                            p->shortstrState(p->getRealState()).c_str(),
-                            p->shortstrState(state).c_str(),
-                            TIME_ARGS((gint64) (p->position)),
-                            TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
-                            TIME_ARGS((gint64) (p->duration)),
-                            TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
-                            (p->mAverageFactor > 0.01) ? "Vc" : "V",
-                            p->mPlayingVolume,
-                            p->mCurrentdB
-                            );
-                    fflush(stdout);
-#endif
-                    //cerr << "Pos: " << (p->position * p->mPlayingTempo) / GST_MSECOND << "(" << p->mPlayingms << ") / "
-                    //     << (duration * p->mPlayingTempo) / GST_MSECOND << " @ " << currentVolume << "       \r" << flush;
-                    p->unlockMutex(p->dataMutex);
-                    //}
-                }
-
                 /*
-                else
-                {
-                    printf("RealState: %s FakeState %s | Pos: unknown / unknown           \r",
-                    p->strState(p->getRealState()).c_str(),
-                    p->strState(state).c_str());
-                }
+                printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
+                        "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") %s:%2.2f\r",
+                        p->shortstrState(p->getRealState()).c_str(),
+                        p->shortstrState(state).c_str(),
+                        TIME_ARGS((gint64) (p->position)),
+                        TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
+                        TIME_ARGS((gint64) (p->duration)),
+                        TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
+                        (p->mAverageFactor > 0.01) ? "Vc" : "V",
+                        p->mPlayingVolume,
+                        p->mCurrentdB
+                        );
                 */
-
-        /*
-        if(p->pPipeline != NULL) {
-            gst_element_query_position (p->pPipeline, time_format, &p->position);
-            gst_element_query_duration (p->pPipeline, time_format, &p->duration);
-
-            g_print ("Pipeline time: %" TIME_FORMAT " / %" TIME_FORMAT "\n",
-            TIME_ARGS (p->position), TIME_ARGS (p->duration));
+#else
+                printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
+                        "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") (%s:%2.2f D:%2.2f)          \r",
+                        p->shortstrState(p->getRealState()).c_str(),
+                        p->shortstrState(state).c_str(),
+                        TIME_ARGS((gint64) (p->position)),
+                        TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
+                        TIME_ARGS((gint64) (p->duration)),
+                        TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
+                        (p->mAverageFactor > 0.01) ? "Vc" : "V",
+                        p->mPlayingVolume,
+                        p->mCurrentdB
+                        );
+                fflush(stdout);
+#endif
+            }
+            p->unlockMutex(p->dataMutex);
         }
-        */
 
         usleep(10000);
         state = p->getState();
