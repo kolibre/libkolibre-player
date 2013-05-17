@@ -217,8 +217,14 @@ struct PlayerImpl
     gint64 position, duration;
 
     bool mPlayingWaiting; // Flag is set when we're waiting for new position
+    bool mGotFinalVolume;
+    bool bStartseek;
     float mPlayingVolume;
     float mCompressorRatio;
+    float mCurrentVolume;
+    float mAverageVolume;
+    float mAverageFactor;
+    float mCurrentdB;
     double mPlayingTempo;
     double mPlayingPitch;
     double mPlayingVolumeGain;
@@ -240,6 +246,8 @@ struct PlayerImpl
     playerState realState;
     std::string strState(playerState state);
     std::string shortstrState(playerState state);
+    GstState mGstState;
+    GstState mGstPending;
 
 
     bool setupThread();
@@ -257,6 +265,7 @@ struct PlayerImpl
 
     PlayerPosition pausePosition;
     bool serverTimedOut;
+
 
     bool bEOSCalledAlreadyForThisFile; // HACK for Higgins - Kovalla Kadella
 };
