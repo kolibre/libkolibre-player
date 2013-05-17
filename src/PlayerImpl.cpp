@@ -1496,20 +1496,14 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
     // Setup the datasource depending on the sorucetype
     switch(sourcetype) {
         case http:
-            pDatasource = gst_element_factory_make("souphttpsrc", "pDatasource");
-            if(pDatasource != NULL) {
-                g_object_set(pDatasource, "user-agent", useragent.c_str(), NULL);
-                if(debugmode) g_object_set(pDatasource, "neon-http-debug", 1, NULL);
-            }
-            break;
         case https:
             pDatasource = gst_element_factory_make("souphttpsrc", "pDatasource");
+            g_object_set(pDatasource, "timeout", 5, NULL);
             if(pDatasource != NULL) {
                 g_object_set(pDatasource, "user-agent", useragent.c_str(), NULL);
-                if(debugmode) g_object_set(pDatasource, "neon-http-debug", 1, NULL);
+                if(debugmode) g_object_set(pDatasource, "soup-http-debug", 1, NULL);
             }
             break;
-
         default:
             pDatasource = gst_element_factory_make("filesrc", "pDatasource");
             break;
