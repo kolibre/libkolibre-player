@@ -2987,7 +2987,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                             }
                         } else {
                             // Call the buffering callback, set state to paused
-                            if(p->sendBUFFERINGSignal() == false && filename != "reopening") {
+                            if(p->sendBUFFERINGSignal() && filename != "reopening") {
 
                                 // Set state to pausing
                                 p->setState(PAUSING);
