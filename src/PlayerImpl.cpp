@@ -2513,22 +2513,22 @@ void *player_thread(void *player)
                 //} else {
                 //LOG4CXX_WARN(playerImpleLog, "Got new Filename: '" << p->mFilename << "': '" << p->mStartms << "'->'" << p->mStopms << "'");
 
-        }
+            }
 
-        // Do not try to open an empty file
-        if(p->mFilename != "")
-            openNewFile = true;
+            // Do not try to open an empty file
+            if(p->mFilename != "")
+                openNewFile = true;
 
-        p->mPlayingFilename = p->mFilename;
-        p->mPlayingStartms = p->mStartms;
-        p->mPlayingStopms = p->mStopms;
-        p->mPlayingWaiting = false;
-        p->mPlayingms = 0;
-        p->mOpentime = time(NULL);
-        p->bOpenSignal = false;
-        p->bMutePlayback = false;
-        p->bFadeIn = true;
-        p->bEOSCalledAlreadyForThisFile = false;
+            p->mPlayingFilename = p->mFilename;
+            p->mPlayingStartms = p->mStartms;
+            p->mPlayingStopms = p->mStopms;
+            p->mPlayingWaiting = false;
+            p->mPlayingms = 0;
+            p->mOpentime = time(NULL);
+            p->bOpenSignal = false;
+            p->bMutePlayback = false;
+            p->bFadeIn = true;
+            p->bEOSCalledAlreadyForThisFile = false;
 
         } else if(p->mStartms != p->mPlayingStartms ||
                 p->mStopms != p->mPlayingStopms ||
