@@ -177,6 +177,7 @@ PlayerImpl::PlayerImpl()
     pEqualizer = NULL;
     pAudioconvert2 = NULL;
     pAudiosink = NULL;
+    pQueue2 = NULL;
 
     serverTimedOut = false;
     bEOSCalledAlreadyForThisFile = false;
@@ -1500,29 +1501,44 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
         case http:
         case https:
             pDatasource = gst_element_factory_make("souphttpsrc", "pDatasource");
-            g_object_set(pDatasource, "timeout", 5, NULL);
-            if(pDatasource != NULL) {
+            if (pDatasource != NULL)
+            {
+                g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
+                g_object_set(pDatasource, "timeout", 5, NULL);
                 g_object_set(pDatasource, "user-agent", useragent.c_str(), NULL);
                 if(debugmode) g_object_set(pDatasource, "soup-http-debug", 1, NULL);
             }
-            break;
+            pQueue2 = gst_element_factory_make("queue2", "pQueue2");
+            if (pQueue2 != NULL)
+            {
+                // setup queue2 element to keep 5MB data in memory
+                g_object_set(pQueue2, "max-size-buffers", 0, NULL); // disable buffers
+                g_object_set(pQueue2, "max-size-bytes", 5242880, NULL); // 5MB
+                g_object_set(pQueue2, "max-size-time", 0, NULL); // disable time buffer
+            }
+            if(!pDatasource || !pQueue2) goto fail;
+
+            gst_bin_add(bin, pDatasource);
+            gst_bin_add(bin, pQueue2);
+            gst_element_link(pDatasource, pQueue2);
+
+            return pQueue2;
         default:
             pDatasource = gst_element_factory_make("filesrc", "pDatasource");
-            break;
+            if (pDatasource != NULL)
+            {
+                g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
+            }
+            if (!pDatasource) goto fail;
+
+            gst_bin_add(bin, pDatasource);
+
+            return pDatasource;
     }
-
-    if(!pDatasource)
-        goto fail;
-
-    gst_bin_add(bin, pDatasource);
-
-    // Setup the source location
-    g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
-
-    return pDatasource;
 
 fail:
     LOG4CXX_ERROR(playerImplLog, "filesrc:        " << (pDatasource ? "OK" : "failed"));
+    LOG4CXX_ERROR(playerImplLog, "queue2:         " << (pQueue2 ? "OK" : "failed"));
     return NULL;
 }
 
@@ -2049,6 +2065,7 @@ bool PlayerImpl::destroyPipeline()
     // Pipeline and source
     pPipeline = NULL;
     pBus = NULL;
+    pQueue2 = NULL;
     pDatasource = NULL;
 
     // AudioCD source

@@ -116,6 +116,7 @@ struct PlayerImpl
         *pPipeline,
         *pDatasource,
         *pCddasrc,
+        *pQueue2,
 
         // Decoder for ogg
         *pOggdemux,
