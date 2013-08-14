@@ -3077,13 +3077,14 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
             case GST_MESSAGE_TAG:
                 {
                     GstTagList *tags;
-
-                    LOG4CXX_DEBUG(playerImplLog, "Got tag message from " << gst_element_get_name(GST_MESSAGE_SRC(message)));
+                    gchar *elementname = gst_element_get_name(GST_MESSAGE_SRC(message));
+                    LOG4CXX_DEBUG(playerImplLog, "Got tag message from " << elementname);
 
                     gst_message_parse_tag (message, &tags);
                     gst_tag_list_foreach (tags, (GstTagForeachFunc)parse_tag, p);
 
                     gst_tag_list_free (tags);
+                    g_free(elementname);
                     break;
                 }
             case GST_MESSAGE_ELEMENT:
@@ -3164,8 +3165,10 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                 }
 
             default:
-                LOG4CXX_DEBUG(playerImplLog, "Got message from " << gst_element_get_name(GST_MESSAGE_SRC(message)) << " type: " << gst_message_type_get_name(GST_MESSAGE_TYPE(message)));
-
+                gchar *elementname = gst_element_get_name(GST_MESSAGE_SRC(message));
+                const gchar *messagename = gst_message_type_get_name(GST_MESSAGE_TYPE(message));
+                LOG4CXX_DEBUG(playerImplLog, "Got message from " << elementname << " type: " << messagename);
+                g_free(elementname);
                 break;
         }
     }
