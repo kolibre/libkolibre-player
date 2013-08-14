@@ -681,6 +681,7 @@ void PlayerImpl::pause()
         default:
             if(state != PAUSING)
                 LOG4CXX_WARN(playerImplLog, "Player in " << strState(state) << " state, could not pause");
+            break;
     }
 }
 
@@ -706,6 +707,7 @@ void PlayerImpl::resume()
         default:
             if(state != PLAYING)
                 LOG4CXX_WARN(playerImplLog, "Player in " << strState(state) << " state, could not resume");
+            break;
     }
 }
 
@@ -3172,4 +3174,5 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                 break;
         }
     }
+    return ret;
 }
