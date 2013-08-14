@@ -2041,6 +2041,7 @@ bool PlayerImpl::destroyPipeline()
             if(pAudiosink != NULL) gst_object_unref(pAudiosink);
             if(pBus != NULL) gst_object_unref(pBus);
             if(pPipeline != NULL) gst_object_unref(pAudiosink);
+            if(pQueue2 != NULL) gst_object_unref(pQueue2);
             LOG4CXX_DEBUG(playerImplLog, "Objects destroyed");
 
         } else {
