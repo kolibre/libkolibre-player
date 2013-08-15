@@ -61,7 +61,7 @@ std::string gst_time_string(GstClockTime gstClockTime)
     oss << hours;
     oss << ":";
 
-    //minutes
+    // minutes
     int minutes = (gstClockTime / (GST_SECOND * 60)) % 60;
     if (minutes < 10) oss << "0";
     oss << minutes;
@@ -1482,10 +1482,10 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
     std::transform(filename.begin(), filename.end(),
             filename.begin(), (int(*)(int))tolower);
 
-    // Check if we have a request for a https source
+    // Check if we have a request for a http source
     if(filename.substr(0, 7) == "http://") sourcetype = http;
 
-    // Check if we have a request for a http source
+    // Check if we have a request for a https source
     else if(filename.substr(0, 8) == "https://") sourcetype = https;
 
     // otherwise assume it's a filesource
@@ -2821,14 +2821,14 @@ void *player_thread(void *player)
             LOG4CXX_TRACE(playerImplLog, "Querying stream position");
             if (!gst_element_query_position (p->pPipeline, &fmt, &p->position))
             {
-                LOG4CXX_WARN(playerImplLog, "Position query faild");
+                LOG4CXX_WARN(playerImplLog, "Position query failed");
                 updatePosition = false;
             }
 
             LOG4CXX_TRACE(playerImplLog, "Querying stream duration");
             if (!gst_element_query_duration (p->pPipeline, &fmt, &p->duration))
             {
-                LOG4CXX_WARN(playerImplLog, "Duration query faild");
+                LOG4CXX_WARN(playerImplLog, "Duration query failed");
                 updatePosition = false;
             }
 
