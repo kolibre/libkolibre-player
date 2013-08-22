@@ -33,6 +33,7 @@ class PlayerControl
         int var_argc;
         char **var_argv;
         bool atEOS;
+        bool error;
         string source;
         PlayerControl();
         void play();
@@ -45,6 +46,7 @@ class PlayerControl
 PlayerControl::PlayerControl():
     player(Player::Instance()),
     atEOS(false),
+    error(false),
     source()
 {
     player->doOnPlayerMessage( boost::bind(&PlayerControl::playerMessageSlot, this, _1) );
@@ -58,6 +60,8 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
     {
         case Player::PLAYER_CONTINUE:
             return true;
+        case Player::PLAYER_ERROR:
+            error = true;
         case Player::PLAYER_ATEOS:
             atEOS = true;
             return true;
@@ -92,7 +96,8 @@ void PlayerControl::play()
         sleep(1);
     }
     //Assert that test run til end!
-    assert( i < 50 );
+    assert( i >= 50 );
+    assert( error == false );
 }
 
 bool PlayerControl::enable( int argc, char **argv )
