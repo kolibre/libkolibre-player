@@ -2571,9 +2571,8 @@ void *player_thread(void *player)
             openNewFile = false;
             p->setRealState(GST_STATE_READY, GST_STATE_PAUSED);
             if( p->setupPipeline() ){
-                 LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline, player thread exiting!");
-                 p->setState(EXITING);
-                 continue;
+                 LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline");
+                 p->sendERRORSignal();
             }
             p->lockMutex(p->dataMutex);
             if(p->mPlayingStartms != 0) p->bStartseek = true;
