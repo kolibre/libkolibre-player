@@ -1516,7 +1516,7 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
                 g_object_set(pQueue2, "max-size-bytes", 5242880, NULL); // 5MB
                 g_object_set(pQueue2, "max-size-time", 0, NULL); // disable time buffer
             }
-            if(!pDatasource || !pQueue2) goto fail;
+            if(!pDatasource || !pQueue2) goto fail_http;
 
             gst_bin_add(bin, pDatasource);
             gst_bin_add(bin, pQueue2);
@@ -1529,15 +1529,19 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
             {
                 g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
             }
-            if (!pDatasource) goto fail;
+            if (!pDatasource) goto fail_file;
 
             gst_bin_add(bin, pDatasource);
 
             return pDatasource;
     }
 
-fail:
+fail_file:
     LOG4CXX_ERROR(playerImplLog, "filesrc:        " << (pDatasource ? "OK" : "failed"));
+    return NULL;
+
+fail_http:
+    LOG4CXX_ERROR(playerImplLog, "souphttpsrc:    " << (pDatasource ? "OK" : "failed"));
     LOG4CXX_ERROR(playerImplLog, "queue2:         " << (pQueue2 ? "OK" : "failed"));
     return NULL;
 }
