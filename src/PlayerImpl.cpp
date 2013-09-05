@@ -1508,12 +1508,13 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
                 g_object_set(pDatasource, "user-agent", useragent.c_str(), NULL);
                 if(debugmode) g_object_set(pDatasource, "soup-http-debug", 1, NULL);
             }
+
             pQueue2 = gst_element_factory_make("queue2", "pQueue2");
             if (pQueue2 != NULL)
             {
-                // setup queue2 element to keep 5MB data in memory
+                // setup queue2 element to keep 10MB data in memory
                 g_object_set(pQueue2, "max-size-buffers", 0, NULL); // disable buffers
-                g_object_set(pQueue2, "max-size-bytes", 5242880, NULL); // 5MB
+                g_object_set(pQueue2, "max-size-bytes", 10485760, NULL); // 10MB
                 g_object_set(pQueue2, "max-size-time", 0, NULL); // disable time buffer
             }
             if(!pDatasource || !pQueue2) goto fail_http;
