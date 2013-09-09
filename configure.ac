@@ -118,6 +118,15 @@ PKG_CHECK_MODULES(GSTCONTROLLER, gstreamer-controller-0.10 >= 0.10.0)
 AC_SUBST(GSTCONTROLLER_CFLAGS)
 AC_SUBST(GSTCONTROLLER_LIBS)
 
+dnl -----------------------------------------------
+dnl determine if buffered streaming is configured
+dnl -----------------------------------------------
+
+AC_ARG_ENABLE(buffered-streaming,
+              AS_HELP_STRING([--enable-buffered-streaming], [use buffered streaming [default=no]]),
+              AC_DEFINE(BUFFERED_STREAMING, 1, [Use buffered streaming])
+              )
+
 # Checks for header files.
 AC_CHECK_HEADERS([locale.h termios.h unistd.h])
 

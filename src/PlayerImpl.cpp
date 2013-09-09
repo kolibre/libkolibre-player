@@ -29,6 +29,7 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <log4cxx/logger.h>
 
+#include "config.h"
 #include "SmilTime.h"
 #include "PlayerImpl.h"
 
@@ -1509,6 +1510,7 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
                 if(debugmode) g_object_set(pDatasource, "soup-http-debug", 1, NULL);
             }
 
+#ifdef BUFFERED_STREAMING
             pQueue2 = gst_element_factory_make("queue2", "pQueue2");
             if (pQueue2 != NULL)
             {
@@ -1524,6 +1526,14 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
             gst_element_link(pDatasource, pQueue2);
 
             return pQueue2;
+#else
+            if(!pDatasource) goto fail_http;
+
+            gst_bin_add(bin, pDatasource);
+
+            return pDatasource;
+#endif
+
         default:
             pDatasource = gst_element_factory_make("filesrc", "pDatasource");
             if (pDatasource != NULL)
@@ -1543,7 +1553,9 @@ fail_file:
 
 fail_http:
     LOG4CXX_ERROR(playerImplLog, "souphttpsrc:    " << (pDatasource ? "OK" : "failed"));
+#ifdef BUFFERED_STREAMING
     LOG4CXX_ERROR(playerImplLog, "queue2:         " << (pQueue2 ? "OK" : "failed"));
+#endif
     return NULL;
 }
 
