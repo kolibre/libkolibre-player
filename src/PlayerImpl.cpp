@@ -444,6 +444,7 @@ bool PlayerImpl::sendCONTSignal()
     mPlayingWaiting = true;
     unlockMutex(dataMutex);
 
+    LOG4CXX_DEBUG(playerImplLog, "Sending 'Continue?' signal");
     bool result = *onPlayerMessage( Player::PLAYER_CONTINUE );
 
     //In case result is false reset it to false before returning
@@ -453,7 +454,6 @@ bool PlayerImpl::sendCONTSignal()
         unlockMutex(dataMutex);
     }
 
-    LOG4CXX_DEBUG(playerImplLog, "Sending 'Continue?' signal");
     //if ( not result ){
     //return *onSegmentFinishedPlaying();
     //}
@@ -469,7 +469,7 @@ bool PlayerImpl::sendCONTSignal()
 bool PlayerImpl::sendEOSSignal()
 {
     LOG4CXX_DEBUG(playerImplLog, "Sending 'EOS' signal");
-    return onPlayerMessage( Player::PLAYER_ATEOS );
+    return *onPlayerMessage( Player::PLAYER_ATEOS );
 }
 
 /**
@@ -480,7 +480,7 @@ bool PlayerImpl::sendEOSSignal()
 bool PlayerImpl::sendBUFFERINGSignal()
 {
     LOG4CXX_WARN(playerImplLog, "Sending 'BUFFERING' signal");
-    return onPlayerMessage( Player::PLAYER_BUFFERING );
+    return *onPlayerMessage( Player::PLAYER_BUFFERING );
 }
 
 /**
@@ -491,7 +491,7 @@ bool PlayerImpl::sendBUFFERINGSignal()
 bool PlayerImpl::sendERRORSignal()
 {
     LOG4CXX_WARN(playerImplLog, "Sending 'ERROR' signal");
-    return onPlayerMessage( Player::PLAYER_ERROR );
+    return *onPlayerMessage( Player::PLAYER_ERROR );
 }
 
 /**
