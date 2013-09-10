@@ -117,7 +117,8 @@ using namespace std;
 /**
  * Player constructor
  */
-PlayerImpl::PlayerImpl()
+PlayerImpl::PlayerImpl():
+        playbackThread(0)
 {
     // Setup mutexes and condition variable
     stateMutex = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
@@ -192,9 +193,13 @@ PlayerImpl::~PlayerImpl()
     LOG4CXX_TRACE(playerImplLog, "Destructor");
 
     // Tell the playbackThread to exit
-    setState(EXITING);
-    pthread_join (playbackThread, NULL);
-    gst_deinit();
+    if(realState!=INACTIVE){
+        setState(EXITING);
+        if(playbackThread)
+            pthread_join (playbackThread, NULL);
+
+        gst_deinit();
+    }
 }
 
 /**
