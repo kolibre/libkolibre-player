@@ -21,6 +21,7 @@ AUTOMAKE_OPTIONS = foreign
 check_PROGRAMS = codectest \
 				 tempopitchtest \
 				 seektest \
+				 playersignaltest \
 				 seek_on_continue
 
 TESTS = codectest_wav.sh \
@@ -32,7 +33,12 @@ TESTS = codectest_wav.sh \
 		seektest_wav.sh \
 		seektest_ogg.sh \
 		seektest_mp3.sh \
-		seek_on_continue
+		seek_on_continue \
+		playersignaltest
+
+playersignaltest_SOURCES = player_signal_test.cpp 
+playersignaltest_CPPFLAGS = -I$(top_srcdir)/src -g @LOG4CXX_LIBS@ @GLIB_CFLAGS@ @GST_CFLAGS@ @PTHREAD_CFLAGS@
+playersignaltest_LDFLAGS = -I$(top_srcdir)/src $(top_builddir)/src/libkolibre_player_la-PlayerImpl.lo @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
 
 codectest_SOURCES = codectest.cpp
 tempopitchtest_SOURCES = tempopitchtest.cpp
@@ -42,6 +48,8 @@ seek_on_continue_SOURCES = seek_on_continue_data.cpp seek_on_continue.cpp
 LDADD = -lkolibre-player
 AM_LDFLAGS = -L$(top_builddir)/src @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
 AM_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@ -I$(top_srcdir)/src
+
+
 
 EXTRA_DIST = setup_logging.h \
 			 data.h \
