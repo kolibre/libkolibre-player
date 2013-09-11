@@ -445,7 +445,14 @@ bool PlayerImpl::sendCONTSignal()
     unlockMutex(dataMutex);
 
     LOG4CXX_DEBUG(playerImplLog, "Sending 'Continue?' signal");
-    bool result = *onPlayerMessage( Player::PLAYER_CONTINUE );
+    bool result;
+    boost::optional<bool> resultval = onPlayerMessage( Player::PLAYER_CONTINUE );
+    if (resultval!=NULL)
+        result = *resultval;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        result = false;
+    }
 
     //In case result is false reset it to false before returning
     if (not result){
@@ -469,7 +476,13 @@ bool PlayerImpl::sendCONTSignal()
 bool PlayerImpl::sendEOSSignal()
 {
     LOG4CXX_DEBUG(playerImplLog, "Sending 'EOS' signal");
-    return *onPlayerMessage( Player::PLAYER_ATEOS );
+    boost::optional<bool> result = onPlayerMessage( Player::PLAYER_ATEOS );
+    if (result!=NULL)
+        return *result;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        return false;
+    }
 }
 
 /**
@@ -480,7 +493,13 @@ bool PlayerImpl::sendEOSSignal()
 bool PlayerImpl::sendBUFFERINGSignal()
 {
     LOG4CXX_WARN(playerImplLog, "Sending 'BUFFERING' signal");
-    return *onPlayerMessage( Player::PLAYER_BUFFERING );
+    boost::optional<bool> result = onPlayerMessage( Player::PLAYER_BUFFERING );
+    if (result!=NULL)
+        return *result;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        return false;
+    }
 }
 
 /**
@@ -491,7 +510,14 @@ bool PlayerImpl::sendBUFFERINGSignal()
 bool PlayerImpl::sendERRORSignal()
 {
     LOG4CXX_WARN(playerImplLog, "Sending 'ERROR' signal");
-    return *onPlayerMessage( Player::PLAYER_ERROR );
+
+    boost::optional<bool> result = onPlayerMessage( Player::PLAYER_ERROR );
+    if (result!=NULL)
+        return *result;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        return false;
+    }
 }
 
 /**
