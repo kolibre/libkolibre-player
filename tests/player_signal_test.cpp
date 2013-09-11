@@ -40,9 +40,19 @@ int main(int argc, char *argv[])
 
     PlayerImpl Player;
 
+    //Test sending a message with no slots
+    bool res = Player.sendERRORSignal();
+    assert(!res);
+    res = Player.sendBUFFERINGSignal();
+    assert(!res);
+    res = Player.sendCONTSignal();
+    assert(!res);
+    res = Player.sendEOSSignal();
+    assert(!res);
+
     Player.doOnPlayerMessage(playerMessageSlot);
 
-    bool res = Player.sendERRORSignal();
+    res = Player.sendERRORSignal();
     assert(res);
 
     res = Player.sendCONTSignal();
