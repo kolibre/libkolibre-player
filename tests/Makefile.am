@@ -49,8 +49,6 @@ LDADD = -lkolibre-player
 AM_LDFLAGS = -L$(top_builddir)/src @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
 AM_CPPFLAGS = @PTHREAD_CFLAGS@ @LOG4CXX_CFLAGS@ -I$(top_srcdir)/src
 
-
-
 EXTRA_DIST = setup_logging.h \
 			 data.h \
 			 codectest_wav.sh \
