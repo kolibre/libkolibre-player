@@ -136,15 +136,10 @@ void PlayerControl::play()
     player->open( srcDir + "/" + urls[currentitem].url, urls[currentitem].startms, urls[currentitem].stopms);
     player->resume();
     cout << "\nWaiting for eos or max segments" << maxitems << endl;
-    int time = 0;
-    while(!atEOS && currentitem < maxitems && time < 60){
-        sleep(1);
-        time++;
-    }
+    while (!atEOS && currentitem < maxitems) sleep(1);
 
     cout << "\nPlayer stopped. segments played: " << currentitem << endl;
     assert(currentitem == maxitems);
-    assert(time < 60);
 }
 
 bool PlayerControl::enable( int argc, char **argv )

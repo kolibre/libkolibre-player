@@ -91,12 +91,10 @@ void PlayerControl::play()
 {
     player->open( source );
     player->resume();
-    int i;
-    for ( ; !atEOS && i < 50; i++ ) {
-        sleep(1);
-    }
-    //Assert that test run til end!
-    assert( i >= 50 );
+    while (!atEOS) sleep(1);
+
+    // Assert that test run til end and no errors occurred!
+    assert( atEOS == true );
     assert( error == false );
 }
 
