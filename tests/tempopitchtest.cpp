@@ -58,6 +58,7 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
         case Player::PLAYER_CONTINUE:
             return true;
         case Player::PLAYER_ATEOS:
+        case Player::PLAYER_ERROR:
             atEOS = true;
             return true;
     }
