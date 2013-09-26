@@ -3034,7 +3034,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                             LOG4CXX_ERROR(playerImplLog, "Number of retires exceeded, calling ERROR callback");
                             if(p->sendERRORSignal() == false) {
                                 // Set state to pausing
-                                p->setState(PAUSING);
+                                p->setState(STOPPED);
 
                                 // Call EOS callback
                                 p->sendEOSSignal();
