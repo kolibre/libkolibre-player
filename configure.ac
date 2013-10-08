@@ -52,7 +52,7 @@ m4_define([EXTRA_VERSION], [])
 AC_PREREQ([2.67])
 AC_INIT([kolibre-player],[MAJOR_VERSION.MINOR_VERSION.PATCH_VERSION[]EXTRA_VERSION],[BUG-REPORT-ADDRESS])
 AC_CONFIG_SRCDIR([src])
-AM_INIT_AUTOMAKE([tar-pax])
+AM_INIT_AUTOMAKE([tar-pax color-tests])
 AC_CONFIG_HEADERS([config.h])
 
 VERSION_INFO=m4_eval(MAJOR_VERSION + MINOR_VERSION):PATCH_VERSION:MINOR_VERSION
@@ -117,6 +117,15 @@ PKG_CHECK_MODULES(GSTCONTROLLER, gstreamer-controller-0.10 >= 0.10.0)
 
 AC_SUBST(GSTCONTROLLER_CFLAGS)
 AC_SUBST(GSTCONTROLLER_LIBS)
+
+dnl -----------------------------------------------
+dnl determine if buffered streaming is configured
+dnl -----------------------------------------------
+
+AC_ARG_ENABLE(buffered-streaming,
+              AS_HELP_STRING([--enable-buffered-streaming], [use buffered streaming [default=no]]),
+              AC_DEFINE(BUFFERED_STREAMING, 1, [Use buffered streaming])
+              )
 
 # Checks for header files.
 AC_CHECK_HEADERS([locale.h termios.h unistd.h])

@@ -78,6 +78,7 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
                     player->stop();
                     atEOS = true;
                 }
+                break;
             }
         case Player::PLAYER_ATEOS:
             {
@@ -92,6 +93,11 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
                     cout << "\nPLAYER AT END OF STREAM AND NO SEGMENTS LEFT TO PLAY -> Quit" << endl;
                     atEOS = true;
                 }
+                break;
+            }
+        case Player::PLAYER_ERROR:
+            {
+                atEOS = true;
             }
     }
     return false;

@@ -29,6 +29,7 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <log4cxx/logger.h>
 
+#include "config.h"
 #include "SmilTime.h"
 #include "PlayerImpl.h"
 
@@ -61,7 +62,7 @@ std::string gst_time_string(GstClockTime gstClockTime)
     oss << hours;
     oss << ":";
 
-    //minutes
+    // minutes
     int minutes = (gstClockTime / (GST_SECOND * 60)) % 60;
     if (minutes < 10) oss << "0";
     oss << minutes;
@@ -102,6 +103,7 @@ log4cxx::LoggerPtr playerImplLog(log4cxx::Logger::getLogger("kolibre.player.play
 char spinner[] = { '-', '\\', '|', '/' };
 
 void *player_thread(void *player);
+bool handle_bus_message(GstMessage *message, PlayerImpl *p);
 
 #define bError true
 #define bOk false
@@ -115,7 +117,8 @@ using namespace std;
 /**
  * Player constructor
  */
-PlayerImpl::PlayerImpl()
+PlayerImpl::PlayerImpl():
+        playbackThread(0)
 {
     // Setup mutexes and condition variable
     stateMutex = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
@@ -145,6 +148,10 @@ PlayerImpl::PlayerImpl()
     mPlayingVolumeGain = mVolumeGain = 1.0;
     mPlayingTreble = mTreble = 0.0;
     mPlayingBass = mBass = 0.0;
+    mCurrentVolume = mPlayingVolume;
+    mAverageVolume = 1.0;
+    mAverageFactor = 0.5;
+    mCurrentdB = 0.0;
 
     pipeType = NOPIPE;
 
@@ -172,6 +179,7 @@ PlayerImpl::PlayerImpl()
     pEqualizer = NULL;
     pAudioconvert2 = NULL;
     pAudiosink = NULL;
+    pQueue2 = NULL;
 
     serverTimedOut = false;
     bEOSCalledAlreadyForThisFile = false;
@@ -185,9 +193,13 @@ PlayerImpl::~PlayerImpl()
     LOG4CXX_TRACE(playerImplLog, "Destructor");
 
     // Tell the playbackThread to exit
-    setState(EXITING);
-    pthread_join (playbackThread, NULL);
-    gst_deinit();
+    if(realState!=INACTIVE){
+        setState(EXITING);
+        if(playbackThread)
+            pthread_join (playbackThread, NULL);
+
+        gst_deinit();
+    }
 }
 
 /**
@@ -432,7 +444,15 @@ bool PlayerImpl::sendCONTSignal()
     mPlayingWaiting = true;
     unlockMutex(dataMutex);
 
-    bool result = *onPlayerMessage( Player::PLAYER_CONTINUE );
+    LOG4CXX_DEBUG(playerImplLog, "Sending 'Continue?' signal");
+    bool result;
+    boost::optional<bool> resultval = onPlayerMessage( Player::PLAYER_CONTINUE );
+    if (resultval!=NULL)
+        result = *resultval;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        result = false;
+    }
 
     //In case result is false reset it to false before returning
     if (not result){
@@ -441,7 +461,6 @@ bool PlayerImpl::sendCONTSignal()
         unlockMutex(dataMutex);
     }
 
-    LOG4CXX_DEBUG(playerImplLog, "Sending 'Continue?' signal");
     //if ( not result ){
     //return *onSegmentFinishedPlaying();
     //}
@@ -457,7 +476,13 @@ bool PlayerImpl::sendCONTSignal()
 bool PlayerImpl::sendEOSSignal()
 {
     LOG4CXX_DEBUG(playerImplLog, "Sending 'EOS' signal");
-    return onPlayerMessage( Player::PLAYER_ATEOS );
+    boost::optional<bool> result = onPlayerMessage( Player::PLAYER_ATEOS );
+    if (result!=NULL)
+        return *result;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        return false;
+    }
 }
 
 /**
@@ -468,7 +493,13 @@ bool PlayerImpl::sendEOSSignal()
 bool PlayerImpl::sendBUFFERINGSignal()
 {
     LOG4CXX_WARN(playerImplLog, "Sending 'BUFFERING' signal");
-    return onPlayerMessage( Player::PLAYER_BUFFERING );
+    boost::optional<bool> result = onPlayerMessage( Player::PLAYER_BUFFERING );
+    if (result!=NULL)
+        return *result;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        return false;
+    }
 }
 
 /**
@@ -479,7 +510,14 @@ bool PlayerImpl::sendBUFFERINGSignal()
 bool PlayerImpl::sendERRORSignal()
 {
     LOG4CXX_WARN(playerImplLog, "Sending 'ERROR' signal");
-    return onPlayerMessage( Player::PLAYER_ERROR );
+
+    boost::optional<bool> result = onPlayerMessage( Player::PLAYER_ERROR );
+    if (result!=NULL)
+        return *result;
+    else {
+        LOG4CXX_WARN(playerImplLog, "No slots connected, defaulting returnvalue to false");
+        return false;
+    }
 }
 
 /**
@@ -600,7 +638,7 @@ void PlayerImpl::seekPos(long long int seektime)
 
                 LOG4CXX_INFO(playerImplLog, "Seeking to " << seektime << " ms (" << c_seektime << ")");
 
-                if (!gst_element_seek_simple (pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                if (!gst_element_seek_simple (pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                 {
                     LOG4CXX_ERROR(playerImplLog, "Seek to " << seektime << " in '" << filename << "' failed");
                     return;
@@ -676,6 +714,7 @@ void PlayerImpl::pause()
         default:
             if(state != PAUSING)
                 LOG4CXX_WARN(playerImplLog, "Player in " << strState(state) << " state, could not pause");
+            break;
     }
 }
 
@@ -701,6 +740,7 @@ void PlayerImpl::resume()
         default:
             if(state != PLAYING)
                 LOG4CXX_WARN(playerImplLog, "Player in " << strState(state) << " state, could not resume");
+            break;
     }
 }
 
@@ -1475,10 +1515,10 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
     std::transform(filename.begin(), filename.end(),
             filename.begin(), (int(*)(int))tolower);
 
-    // Check if we have a request for a https source
+    // Check if we have a request for a http source
     if(filename.substr(0, 7) == "http://") sourcetype = http;
 
-    // Check if we have a request for a http source
+    // Check if we have a request for a https source
     else if(filename.substr(0, 8) == "https://") sourcetype = https;
 
     // otherwise assume it's a filesource
@@ -1491,37 +1531,62 @@ GstElement *PlayerImpl::setupDatasource(GstBin *bin)
     // Setup the datasource depending on the sorucetype
     switch(sourcetype) {
         case http:
-            pDatasource = gst_element_factory_make("souphttpsrc", "pDatasource");
-            if(pDatasource != NULL) {
-                g_object_set(pDatasource, "user-agent", useragent.c_str(), NULL);
-                if(debugmode) g_object_set(pDatasource, "neon-http-debug", 1, NULL);
-            }
-            break;
         case https:
             pDatasource = gst_element_factory_make("souphttpsrc", "pDatasource");
-            if(pDatasource != NULL) {
+            if (pDatasource != NULL)
+            {
+                g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
+                g_object_set(pDatasource, "timeout", 5, NULL);
                 g_object_set(pDatasource, "user-agent", useragent.c_str(), NULL);
-                if(debugmode) g_object_set(pDatasource, "neon-http-debug", 1, NULL);
+                if(debugmode) g_object_set(pDatasource, "soup-http-debug", 1, NULL);
             }
-            break;
+
+#ifdef BUFFERED_STREAMING
+            pQueue2 = gst_element_factory_make("queue2", "pQueue2");
+            if (pQueue2 != NULL)
+            {
+                // setup queue2 element to keep 10MB data in memory
+                g_object_set(pQueue2, "max-size-buffers", 0, NULL); // disable buffers
+                g_object_set(pQueue2, "max-size-bytes", 10485760, NULL); // 10MB
+                g_object_set(pQueue2, "max-size-time", 0, NULL); // disable time buffer
+            }
+            if(!pDatasource || !pQueue2) goto fail_http;
+
+            gst_bin_add(bin, pDatasource);
+            gst_bin_add(bin, pQueue2);
+            gst_element_link(pDatasource, pQueue2);
+
+            return pQueue2;
+#else
+            if(!pDatasource) goto fail_http;
+
+            gst_bin_add(bin, pDatasource);
+
+            return pDatasource;
+#endif
 
         default:
             pDatasource = gst_element_factory_make("filesrc", "pDatasource");
-            break;
+            if (pDatasource != NULL)
+            {
+                g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
+            }
+            if (!pDatasource) goto fail_file;
+
+            gst_bin_add(bin, pDatasource);
+
+            return pDatasource;
     }
 
-    if(!pDatasource)
-        goto fail;
-
-    gst_bin_add(bin, pDatasource);
-
-    // Setup the source location
-    g_object_set(pDatasource, "location", mPlayingFilename.c_str(), NULL);
-
-    return pDatasource;
-
-fail:
+fail_file:
     LOG4CXX_ERROR(playerImplLog, "filesrc:        " << (pDatasource ? "OK" : "failed"));
+    return NULL;
+
+fail_http:
+    LOG4CXX_ERROR(playerImplLog, "souphttpsrc:    " << (pDatasource ? "OK" : "failed"));
+#ifdef BUFFERED_STREAMING
+    LOG4CXX_ERROR(playerImplLog, "queue2:         " << (pQueue2 ? "OK" : "failed"));
+#endif
     return NULL;
 }
 
@@ -2024,6 +2089,7 @@ bool PlayerImpl::destroyPipeline()
             if(pAudiosink != NULL) gst_object_unref(pAudiosink);
             if(pBus != NULL) gst_object_unref(pBus);
             if(pPipeline != NULL) gst_object_unref(pAudiosink);
+            if(pQueue2 != NULL) gst_object_unref(pQueue2);
             LOG4CXX_DEBUG(playerImplLog, "Objects destroyed");
 
         } else {
@@ -2048,6 +2114,7 @@ bool PlayerImpl::destroyPipeline()
     // Pipeline and source
     pPipeline = NULL;
     pBus = NULL;
+    pQueue2 = NULL;
     pDatasource = NULL;
 
     // AudioCD source
@@ -2317,12 +2384,14 @@ bool PlayerImpl::setupPipeline()
 
         default:
             LOG4CXX_ERROR(playerImplLog, "Pipeline type not defined");
+            return bError;
             break;
     }
 
     LOG4CXX_DEBUG(playerImplLog, "Setting pipeline to READY");
 
     if(gst_element_set_state (GST_ELEMENT (pPipeline), GST_STATE_PAUSED) != GST_STATE_CHANGE_FAILURE) {
+
         if(waitStateChange() == bError) usleep(1000000);
         LOG4CXX_DEBUG(playerImplLog, "Setting pipeline to READY OK");
     } else {
@@ -2447,13 +2516,8 @@ void *player_thread(void *player)
     bool ret = 0;
     bool openNewFile = false;
     bool openNewPosition = false;
-    bool bStartseek = false;
+    p->bStartseek = false;
 
-    float currentVolume = p->mPlayingVolume;
-    float averageVolume = 1.0;
-    float averageFactor = 0.5;
-    float currentdB = 0.0;
-    bool gotFinalVolume = false;
     double currentTempo = p->mPlayingTempo;
     double currentPitch;
     double currentVolumeGain;
@@ -2464,7 +2528,8 @@ void *player_thread(void *player)
 #endif
 
     long lastPosms = 0;
-    GstState gstState = GST_STATE_NULL, gstPending = GST_STATE_VOID_PENDING;
+    p->mGstState = GST_STATE_NULL;
+    p->mGstPending = GST_STATE_VOID_PENDING;
 
     GstMessage *message;
 
@@ -2516,22 +2581,22 @@ void *player_thread(void *player)
                 //} else {
                 //LOG4CXX_WARN(playerImpleLog, "Got new Filename: '" << p->mFilename << "': '" << p->mStartms << "'->'" << p->mStopms << "'");
 
-        }
+            }
 
-        // Do not try to open an empty file
-        if(p->mFilename != "")
-            openNewFile = true;
+            // Do not try to open an empty file
+            if(p->mFilename != "")
+                openNewFile = true;
 
-        p->mPlayingFilename = p->mFilename;
-        p->mPlayingStartms = p->mStartms;
-        p->mPlayingStopms = p->mStopms;
-        p->mPlayingWaiting = false;
-        p->mPlayingms = 0;
-        p->mOpentime = time(NULL);
-        p->bOpenSignal = false;
-        p->bMutePlayback = false;
-        p->bFadeIn = true;
-        p->bEOSCalledAlreadyForThisFile = false;
+            p->mPlayingFilename = p->mFilename;
+            p->mPlayingStartms = p->mStartms;
+            p->mPlayingStopms = p->mStopms;
+            p->mPlayingWaiting = false;
+            p->mPlayingms = 0;
+            p->mOpentime = time(NULL);
+            p->bOpenSignal = false;
+            p->bMutePlayback = false;
+            p->bFadeIn = true;
+            p->bEOSCalledAlreadyForThisFile = false;
 
         } else if(p->mStartms != p->mPlayingStartms ||
                 p->mStopms != p->mPlayingStopms ||
@@ -2572,15 +2637,15 @@ void *player_thread(void *player)
             openNewFile = false;
             p->setRealState(GST_STATE_READY, GST_STATE_PAUSED);
             if( p->setupPipeline() ){
-                 LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline, player thread exiting!");
-                 p->setState(EXITING);
-                 continue;
+                 LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline");
+                 p->sendERRORSignal();
             }
-
-            if(p->mPlayingStartms != 0) bStartseek = true;
-            averageFactor = 0.5;
-            averageVolume = 1.0;
-            gotFinalVolume = false;
+            p->lockMutex(p->dataMutex);
+            if(p->mPlayingStartms != 0) p->bStartseek = true;
+            p->mAverageFactor = 0.5;
+            p->mAverageVolume = 1.0;
+            p->mGotFinalVolume = false;
+            p->unlockMutex(p->dataMutex);
 
 
         } else if(openNewPosition) {
@@ -2600,313 +2665,23 @@ void *player_thread(void *player)
 
                 g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
 
-                bStartseek = true;
+                p->bStartseek = true;
             }
             p->unlockMutex(p->dataMutex);
         }
 
-        // Check and process messages from GStreamer
-        if(p->pBus != NULL) {
-            //LOG4CXX_DEBUG(playerImpleLog, "Polling bus");
-            while((message = gst_bus_poll (p->pBus, GST_MESSAGE_ANY, 10 * GST_MSECOND)) != NULL) {
-                //LOG4CXX_DEBUG(playerImpleLog, "Got message");
-
-                switch (message->type) {
-                    case GST_MESSAGE_EOS:
-                        gst_message_unref (message);
-                        LOG4CXX_WARN(playerImplLog, "Recieved EOS at " << TIME_STR((gint64) (p->position)) << " (" << TIME_STR((gint64) (p->mPlayingms * GST_MSECOND)) << ") / " << TIME_STR((gint64) (p->duration)) << " (-" << TIME_STR((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)) << ")");
-
-                        ret = false;
-                        p->lockMutex(p->dataMutex);
-                        if(p->mPlayingFilename == "reopening") ret = true;
-                        p->unlockMutex(p->dataMutex);
-
-                        if(ret)
-                        {
-                            LOG4CXX_WARN(playerImplLog, "Not calling EOS callback, reopening file");
-                        }
-                        else
-                        {
-                            p->lockMutex(p->dataMutex);
-                            p->bEOSCalledAlreadyForThisFile = true;
-                            p->unlockMutex(p->dataMutex);
-
-                            p->sendEOSSignal();
-                        }
-
-                        break;
-
-                    case GST_MESSAGE_WARNING:
-                    case GST_MESSAGE_ERROR:
-                        {
-                            GError *gerror;
-                            gchar *debug;
-
-                            string type = "None";
-
-                            if(message->type == GST_MESSAGE_ERROR) {
-                                type = "Error";
-                                gst_message_parse_error (message, &gerror, &debug);
-                            } else {
-                                type = "Warning";
-                                gst_message_parse_warning(message, &gerror, &debug);
-                            }
-
-                            //gst_object_default_error (GST_MESSAGE_SRC (message), gerror, debug);
-
-                            LOG4CXX_ERROR(playerImplLog, type << " from: " << gst_object_get_name(GST_MESSAGE_SRC(message)) << " '" << gerror->message << "'(" << gerror->code << ") '" << debug << "'");
-
-                            // Workaround for bug..?
-                            if(GST_MESSAGE_SRC(message) == GST_OBJECT(p->pAudiosink)) {
-                                LOG4CXX_WARN(playerImplLog, "Audiosink error, setting state to PLAYING");
-                                gst_element_set_state(p->pPipeline, GST_STATE_PLAYING);
-                                gstPending = GST_STATE_PLAYING;
-                            }
-
-                            // If we recieved an error from datasource retry opening the file
-                            if(GST_MESSAGE_SRC(message) == GST_OBJECT(p->pDatasource)) {
-
-                                // Get variables needed
-                                p->lockMutex(p->dataMutex);
-                                long long int lastplayedms;
-                                if(p->mPlayingms > p->mUnderrunms) lastplayedms = p->mUnderrunms = p->mPlayingms;
-                                else lastplayedms = p->mUnderrunms;
-                                string filename = p->mPlayingFilename;
-                                int retries = p->mOpenRetries;
-                                time_t retrytime = p->mOpentime;
-                                p->unlockMutex(p->dataMutex);
-
-                                if(retries == 0) {
-                                    LOG4CXX_ERROR(playerImplLog, "Number of retires exceeded, calling ERROR callback");
-                                    if(p->sendERRORSignal() == false) {
-                                        // Set state to pausing
-                                        p->setState(PAUSING);
-
-                                        // Call EOS callback
-                                        p->sendEOSSignal();
-                                    }
-                               } else {
-                                    // Call the buffering callback, set state to paused
-                                    if(p->sendBUFFERINGSignal() == false && filename != "reopening") {
-
-                                        // Set state to pausing
-                                        p->setState(PAUSING);
-
-                                        // Try reopening from last played position
-                                        LOG4CXX_ERROR(playerImplLog, "Reopening " << filename << " at " << lastplayedms << " ms (" << retries -1 << " more retries)");
-
-                                        p->lockMutex(p->dataMutex);
-                                        p->mPlayingFilename = "reopening";
-                                        p->mStartms = lastplayedms;
-                                        p->mOpenRetries--;
-                                        p->unlockMutex(p->dataMutex);
-
-                                        // Check retrytime, wait if less than 10 seconds
-                                        int spincnt = 0;
-                                        if(retrytime + 10 > time(NULL)) {
-                                            LOG4CXX_ERROR(playerImplLog, "Reopening too fast, waiting..");
-                                            for(int i = 0; i < 100 && !p->getState() != EXITING; i++) {
-                                                usleep(50000);
-                                                spincnt++; if(spincnt > 3) spincnt = 0;
-                                                printf("\rWaiting to reopen [%c]      \r",
-                                                spinner[spincnt]); fflush(stdout);
-                                            }
-                                            printf("\rWaiting to reopen [done]\n");
-                                        }
-                                    } else {
-                                        LOG4CXX_WARN(playerImplLog, "Application handled error");
-                                        p->setState(STOPPED);
-                                    }
-                                }
-                            }
-
-                            gst_message_unref (message);
-                            g_error_free (gerror);
-                            g_free (debug);
-                            break;
-                        }
-
-                    case GST_MESSAGE_STATE_CHANGED:
-                        {
-                            if(GST_MESSAGE_SRC(message) == (GstObject*)p->pPipeline) {
-                                GstState oldstate;
-                                gst_message_parse_state_changed (message, &oldstate, &gstState, &gstPending);
-
-                                // Report state changes from PAUSED TO PLAYING AND PLAYING TO PAUSED
-
-                                if(gstPending == GST_STATE_VOID_PENDING &&
-                                        (oldstate == GST_STATE_PLAYING || oldstate == GST_STATE_PAUSED ||
-                                         gstState == GST_STATE_PLAYING || gstState == GST_STATE_PLAYING)) {
-                                            LOG4CXX_INFO(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(gstState) << " at " << TIME_STR((gint64) (p->position)) <<  " (" << TIME_STR((gint64) (p->mPlayingms * GST_MSECOND)) << ") / " << TIME_STR((gint64) (p->duration)) << " (-" << TIME_STR((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)) << ")");
-                                } else {
-                                    LOG4CXX_DEBUG(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(gstState) << " (pending: " << gst_element_state_get_name(gstPending) << ")");
-                                }
-
-                                // Query duration if we come out of PAUSED state
-                                GstFormat fmt = GST_FORMAT_TIME;
-                                if(gstPending == GST_STATE_VOID_PENDING &&  oldstate == GST_STATE_PAUSED) {
-                                    gst_element_query_duration (p->pPipeline, &fmt, &p->duration);
-                                }
-
-
-                                // Store the actual pipeline state in the class variable
-                                p->setRealState(gstState, gstPending);
-
-                                // EXECUTE STARTSEEK
-                                if(bStartseek &&
-                                        // gstState == GST_STATE_PAUSED &&
-                                        gstPending == GST_STATE_VOID_PENDING) {
-                                    p->lockMutex(p->dataMutex);
-                                    gint64 c_seektime = (gint64) ((double)p->mPlayingStartms / p->mPlayingTempo) * GST_MSECOND;
-
-                                    // If jumping backwards, go to a point a littlebit before the seekpoint
-                                    //if(p->mPlayingms > p->mPlayingStartms)
-
-                                    c_seektime -= (SEEKMARGIN_MS * GST_MSECOND);
-                                    if(c_seektime < 0) c_seektime = 0;
-
-                                    LOG4CXX_INFO(playerImplLog, "Startseeking3 from " << TIME_STR(p->mPlayingms * GST_MSECOND) << " to " << TIME_STR(p->mPlayingStartms * GST_MSECOND) << " (" << TIME_STR(c_seektime) << ")");
-
-                                    // Fade in the first few buffers
-                                    p->bFadeIn = true;
-
-                                    p->unlockMutex(p->dataMutex);
-
-                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
-                                    {
-                                        LOG4CXX_ERROR(playerImplLog, "Seek failed");
-                                    }
-                                    else
-                                    {
-                                        LOG4CXX_DEBUG(playerImplLog, "Seek OK");
-                                    }
-
-                                    bStartseek = false;
-                                }
-                            }
-
-                            gst_message_unref (message);
-                            break;
-                        }
-
-                    case GST_MESSAGE_TAG:
-                        {
-                            GstTagList *tags;
-
-                            LOG4CXX_DEBUG(playerImplLog, "Got tag message from " << gst_element_get_name(GST_MESSAGE_SRC(message)));
-
-                            gst_message_parse_tag (message, &tags);
-                            gst_tag_list_foreach (tags, (GstTagForeachFunc)parse_tag, p);
-
-                            gst_tag_list_free (tags);
-                            gst_message_unref (message);
-                            break;
-                        }
-                    case GST_MESSAGE_ELEMENT:
-                        {
-                            const GstStructure *s = gst_message_get_structure (message);
-                            const gchar *name = gst_structure_get_name (s);
-
-                            if (strcmp (name, "level") == 0) {
-                                gint channels;
-                                GstClockTime endtime;
-                                gdouble //rms_dB, peak_dB,
-                                decay_dB;
-                                //gdouble rms, peak, decay;
-
-                                gdouble currentVol = 1.0;
-
-                                const GValue *list;
-                                const GValue *value;
-                                gint i;
-                                if (!gst_structure_get_clock_time (s, "endtime", &endtime))
-                                    g_warning ("Could not parse endtime");
-                                /* we can get the number of channels as the length of any of the value lists */
-
-                                list = gst_structure_get_value (s, "decay");
-                                channels = gst_value_list_get_size (list);
-                                //g_print ("endtime: %" TIME_FORMAT ", channels: %d\n", TIME_ARGS (endtime), channels);
-                                for (i = 0; i < channels; ++i) {
-                                    //list = gst_structure_get_value (s, "rms");
-                                    //value = gst_value_list_get_value (list, i);
-                                    //rms_dB = g_value_get_double (value);
-                                    //list = gst_structure_get_value (s, "peak");
-                                    //value = gst_value_list_get_value (list, i);
-                                    //peak_dB = g_value_get_double (value);
-                                    list = gst_structure_get_value (s, "decay");
-                                    value = gst_value_list_get_value (list, i);
-                                    decay_dB = g_value_get_double (value);
-                                    if(decay_dB < -20.0) decay_dB = -20.0;
-
-                                    //g_print ("\n    RMS: %f dB, peak: %f dB, decay: %f dB",
-                                    //             rms_dB, peak_dB, decay_dB);
-                                    /* converting from dB to normal gives us a value between 0.0 and 1.0 */
-                                    //rms = pow (10, rms_dB / 20);
-                                    //peak = pow(10, peak_dB / 20);
-                                    //decay = pow (10, decay_dB / 20);
-                                    //g_print("\n decay %f decay_dB %f\n", decay, decay_dB);
-                                    //g_print ("\n    RMS: %f , peak: %f , decay: %f ", rms, peak, decay);
-
-                                    //g_print ("    normalized rms value: %f\n", rms);
-                                    currentVol = (pow(20, -decay_dB / 25));
-                                    currentdB = decay_dB;
-                                }
-
-                                p->lockMutex(p->dataMutex);
-
-                                float volumeDiff = 0;
-
-                                // Try to get the average volume
-
-                                if(averageFactor > 0.01) averageFactor -= 0.005;
-                                else averageFactor = 0.01;
-
-                                if(currentVol > currentVolume) currentVolume += averageFactor;
-                                else currentVolume = currentVol;
-
-                                averageVolume = (currentVolume * averageFactor) + (averageVolume * (1-averageFactor));
-
-                                if(averageFactor > 0.01) volumeDiff = currentVolume - p->mPlayingVolume;
-                                else volumeDiff = averageVolume - p->mPlayingVolume;
-
-                                volumeDiff = floor(volumeDiff * 100) / 100.0;
-
-                                // Adjust the playback volume accordingly
-                                if(volumeDiff > 0.01 || volumeDiff < -0.01) {
-                                    // Take it easy on the volume increase while calibrating
-                                    if(averageVolume > p->mPlayingVolume)
-                                        p->mPlayingVolume += (0.5 - averageFactor) * volumeDiff;
-                                    else
-                                        p->mPlayingVolume = averageVolume;
-
-                                    g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
-
-                                    if(averageFactor <= 0.1 && !gotFinalVolume) {
-                                        gotFinalVolume = true;
-                                        LOG4CXX_WARN(playerImplLog, "setting amplify to " << p->mPlayingVolume);
-                                    }
-                                }
-
-                                p->unlockMutex(p->dataMutex);
-                            }
-
-                            gst_message_unref (message);
-                            break;
-                        }
-
-                    default:
-                        LOG4CXX_DEBUG(playerImplLog, "Got message from " << gst_element_get_name(GST_MESSAGE_SRC(message)) << " type: " << gst_message_type_get_name(GST_MESSAGE_TYPE(message)));
-
-                        gst_message_unref (message);
-                        break;
-                }
-            }
+        // Handle messages here
+        if(p->pBus && gst_bus_have_pending(p->pBus)){
+            GstMessage *bus_message;
+            bus_message = gst_bus_pop(p->pBus);
+            handle_bus_message(bus_message, p);
+            gst_message_unref(bus_message);
         }
 
-        if(gstPending == GST_STATE_VOID_PENDING) {
+        if(p->mGstPending == GST_STATE_VOID_PENDING) {
 
             // Get the Gstreamer current state
-            switch(gstState)
+            switch(p->mGstState)
             {
                 case GST_STATE_PAUSED:
                     {
@@ -2916,10 +2691,10 @@ void *player_thread(void *player)
                                 // set gst state to playing or seek
                                 if(p->getRealState() == BUFFERING) break;
 
-                                if(!bStartseek) {
+                                if(!p->bStartseek) {
                                     LOG4CXX_DEBUG(playerImplLog, "Setting Realstate to PLAYING");
                                     gst_element_set_state(p->pPipeline, GST_STATE_PLAYING);
-                                    gstPending = GST_STATE_PLAYING;
+                                    p->mGstPending = GST_STATE_PLAYING;
                                 } else {
                                     p->lockMutex(p->dataMutex);
                                     gint64 c_seektime = (gint64) ((double)p->mPlayingStartms / p->mPlayingTempo) * GST_MSECOND;
@@ -2934,7 +2709,7 @@ void *player_thread(void *player)
 
                                     p->unlockMutex(p->dataMutex);
 
-                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                                     {
                                         LOG4CXX_ERROR(playerImplLog, "Seek failed");
                                     }
@@ -2946,16 +2721,15 @@ void *player_thread(void *player)
                                     p->lockMutex(p->dataMutex);
                                     // Fade in the first few buffers
                                     p->bFadeIn = true;
+                                    p->bStartseek = false;
                                     p->unlockMutex(p->dataMutex);
-
-                                    bStartseek = false;
                                 }
 
                                 break;
 
                             case PAUSING:
                                 // EXECUTE STARTSEEK
-                                if(bStartseek) {
+                                if(p->bStartseek) {
                                     p->lockMutex(p->dataMutex);
                                     gint64 c_seektime = (gint64) ((double)p->mPlayingStartms / p->mPlayingTempo) * GST_MSECOND;
 
@@ -2969,7 +2743,7 @@ void *player_thread(void *player)
 
                                     p->unlockMutex(p->dataMutex);
 
-                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, c_seektime))
+                                    if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
                                     {
                                         LOG4CXX_ERROR(playerImplLog, "Seek failed");
                                     }
@@ -2981,9 +2755,8 @@ void *player_thread(void *player)
                                     p->lockMutex(p->dataMutex);
                                     // Fade in the first few buffers
                                     p->bFadeIn = true;
+                                    p->bStartseek = false;
                                     p->unlockMutex(p->dataMutex);
-
-                                    bStartseek = false;
                                 }
 
                                 // Check for speed change
@@ -3044,7 +2817,7 @@ void *player_thread(void *player)
                                 LOG4CXX_DEBUG(playerImplLog, "Setting Realstate to READY");
                                 gst_element_set_state(p->pPipeline, GST_STATE_READY);
                                 if(p->waitStateChange() == bError) usleep(1000000);
-                                gstPending = GST_STATE_READY;
+                                p->mGstPending = GST_STATE_READY;
                                 break;
 
                             default:
@@ -3063,7 +2836,7 @@ void *player_thread(void *player)
                             case PAUSING:
                                 LOG4CXX_DEBUG(playerImplLog, "Setting Realstate to PAUSED");
                                 gst_element_set_state(p->pPipeline, GST_STATE_PAUSED);
-                                gstPending = GST_STATE_PAUSED;
+                                p->mGstPending = GST_STATE_PAUSED;
                                 // seek backwards to compensate for fadein and half frames
                                 p->mStartms = max(p->mPlayingms+PAUSE_SEEKS_BACKWARDS_MS,p->mStartms);
                                 p->mPlayingStartms = -1;
@@ -3073,7 +2846,7 @@ void *player_thread(void *player)
                                 LOG4CXX_DEBUG(playerImplLog, "Setting Realstate to READY");
                                 gst_element_set_state(p->pPipeline, GST_STATE_READY);
                                 if(p->waitStateChange() == bError) usleep(1000000);
-                                gstPending = GST_STATE_READY;
+                                p->mGstPending = GST_STATE_READY;
                                 break;
                             default:
                                 break;
@@ -3103,87 +2876,74 @@ void *player_thread(void *player)
             }
         }
 
-        GstFormat fmt = GST_FORMAT_TIME;
 
-        if(GST_IS_ELEMENT(p->pPipeline) && (state == PLAYING || state == PAUSING) && //) {
-            //if (
-            gst_element_query_position (p->pPipeline, &fmt, &p->position)
-                //&& gst_element_query_duration (p->pPipeline, &fmt, &p->duration)
-                ) {
-                    //g_print ("\rTime: %" TIME_FORMAT " / %" TIME_FORMAT ,
-                    //             TIME_ARGS (pos), TIME_ARGS (len));
-                    p->lockMutex(p->dataMutex);
-                    //cerr << "Pos: " << (p->position * p->mPlayingTempo) / GST_MSECOND << "(" << p->mPlayingms << ") / "
-                    //         << (p->duration * p->mPlayingTempo) / GST_MSECOND << " @ " << currentVolume << "       \r" << flush;
+        if (GST_IS_ELEMENT(p->pPipeline) && (state == PLAYING || state == PAUSING))
+        {
+            p->lockMutex(p->dataMutex);
+            bool updatePosition = true;
+            GstFormat fmt = GST_FORMAT_TIME;
 
-                    //double amplify = 0.0;
-                    //g_object_get(G_OBJECT(p->pAmplify),"amplification",&amplify,NULL);
+            LOG4CXX_TRACE(playerImplLog, "Querying stream position");
+            if (!gst_element_query_position (p->pPipeline, &fmt, &p->position))
+            {
+                LOG4CXX_WARN(playerImplLog, "Position query failed");
+                updatePosition = false;
+            }
 
-                    if(lastPosms != p->position / 100) {
-                        Player::timeData td;
-                        // Scale current position and duration according to currentTempo
-                        td.current = (double(p->position) * currentTempo) / GST_MSECOND;
-                        td.duration = (double(p->duration) * currentTempo) / GST_MSECOND;
-                        td.segmentstart = p->mPlayingStartms;
-                        td.segmentstop = p->mPlayingStopms;
-                        p->onPlayerTime(td);
-                        lastPosms = p->position / 100;
-                    }
+            LOG4CXX_TRACE(playerImplLog, "Querying stream duration");
+            if (!gst_element_query_duration (p->pPipeline, &fmt, &p->duration))
+            {
+                LOG4CXX_WARN(playerImplLog, "Duration query failed");
+                updatePosition = false;
+            }
+
+            if (updatePosition)
+            {
+                if (lastPosms != p->position / 100)
+                {
+                    Player::timeData td;
+                    // Scale current position and duration according to currentTempo
+                    td.current = (double(p->position) * currentTempo) / GST_MSECOND;
+                    td.duration = (double(p->duration) * currentTempo) / GST_MSECOND;
+                    td.segmentstart = p->mPlayingStartms;
+                    td.segmentstop = p->mPlayingStopms;
+                    p->onPlayerTime(td);
+                    lastPosms = p->position / 100;
+                }
 
 #ifdef WIN32
-                    /*
-                    printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
-                            "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") %s:%2.2f\r",
-                            p->shortstrState(p->getRealState()).c_str(),
-                            p->shortstrState(state).c_str(),
-                            TIME_ARGS((gint64) (p->position)),
-                            TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
-                            TIME_ARGS((gint64) (p->duration)),
-                            TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
-                            (averageFactor > 0.01) ? "Vc" : "V",
-                            p->mPlayingVolume,
-                            currentdB
-                            );
-                    */
-#else
-                    printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
-                            "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") (%s:%2.2f D:%2.2f)           \r",
-                            p->shortstrState(p->getRealState()).c_str(),
-                            p->shortstrState(state).c_str(),
-                            TIME_ARGS((gint64) (p->position)),
-                            TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
-                            TIME_ARGS((gint64) (p->duration)),
-                            TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
-                            (averageFactor > 0.01) ? "Vc" : "V",
-                            p->mPlayingVolume,
-                            currentdB
-                            );
-                    fflush(stdout);
-#endif
-                    //cerr << "Pos: " << (p->position * p->mPlayingTempo) / GST_MSECOND << "(" << p->mPlayingms << ") / "
-                    //     << (duration * p->mPlayingTempo) / GST_MSECOND << " @ " << currentVolume << "       \r" << flush;
-                    p->unlockMutex(p->dataMutex);
-                    //}
-                }
-
                 /*
-                else
-                {
-                    printf("RealState: %s FakeState %s | Pos: unknown / unknown           \r",
-                    p->strState(p->getRealState()).c_str(),
-                    p->strState(state).c_str());
-                }
+                printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
+                        "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") %s:%2.2f\r",
+                        p->shortstrState(p->getRealState()).c_str(),
+                        p->shortstrState(state).c_str(),
+                        TIME_ARGS((gint64) (p->position)),
+                        TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
+                        TIME_ARGS((gint64) (p->duration)),
+                        TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
+                        (p->mAverageFactor > 0.01) ? "Vc" : "V",
+                        p->mPlayingVolume,
+                        p->mCurrentdB
+                        );
                 */
-
-        /*
-        if(p->pPipeline != NULL) {
-            gst_element_query_position (p->pPipeline, time_format, &p->position);
-            gst_element_query_duration (p->pPipeline, time_format, &p->duration);
-
-            g_print ("Pipeline time: %" TIME_FORMAT " / %" TIME_FORMAT "\n",
-            TIME_ARGS (p->position), TIME_ARGS (p->duration));
+#else
+                printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
+                        "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") (%s:%2.2f D:%2.2f)          \r",
+                        p->shortstrState(p->getRealState()).c_str(),
+                        p->shortstrState(state).c_str(),
+                        TIME_ARGS((gint64) (p->position)),
+                        TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
+                        TIME_ARGS((gint64) (p->duration)),
+                        TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
+                        (p->mAverageFactor > 0.01) ? "Vc" : "V",
+                        p->mPlayingVolume,
+                        p->mCurrentdB
+                        );
+                fflush(stdout);
+#endif
+            }
+            p->unlockMutex(p->dataMutex);
         }
-        */
 
         usleep(10000);
         state = p->getState();
@@ -3198,4 +2958,286 @@ void *player_thread(void *player)
     //}
 
     return NULL;
+}
+
+bool handle_bus_message(GstMessage *message, PlayerImpl *p){
+    // Check and process messages from GStreamer
+    bool ret;
+    LOG4CXX_TRACE(playerImplLog, "Got message from " << gst_element_get_name(GST_MESSAGE_SRC(message)) << " type: " << gst_message_type_get_name(GST_MESSAGE_TYPE(message)));
+    if(p->pBus != NULL) {
+
+        switch (message->type) {
+            case GST_MESSAGE_EOS:
+                LOG4CXX_WARN(playerImplLog, "Recieved EOS at " << TIME_STR((gint64) (p->position)) << " (" << TIME_STR((gint64) (p->mPlayingms * GST_MSECOND)) << ") / " << TIME_STR((gint64) (p->duration)) << " (-" << TIME_STR((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)) << ")");
+
+                ret = false;
+                p->lockMutex(p->dataMutex);
+                if(p->mPlayingFilename == "reopening") ret = true;
+                p->unlockMutex(p->dataMutex);
+
+                if(ret)
+                {
+                    LOG4CXX_WARN(playerImplLog, "Not calling EOS callback, reopening file");
+                }
+                else
+                {
+                    p->lockMutex(p->dataMutex);
+                    p->bEOSCalledAlreadyForThisFile = true;
+                    p->unlockMutex(p->dataMutex);
+
+                    p->sendEOSSignal();
+                }
+
+                break;
+
+            case GST_MESSAGE_WARNING:
+            case GST_MESSAGE_ERROR:
+                {
+                    GError *gerror;
+                    gchar *debug;
+
+                    string type = "None";
+
+                    if(message->type == GST_MESSAGE_ERROR) {
+                        type = "Error";
+                        gst_message_parse_error (message, &gerror, &debug);
+                    } else {
+                        type = "Warning";
+                        gst_message_parse_warning(message, &gerror, &debug);
+                    }
+
+                    //gst_object_default_error (GST_MESSAGE_SRC (message), gerror, debug);
+
+                    LOG4CXX_ERROR(playerImplLog, type << " from: " << gst_object_get_name(GST_MESSAGE_SRC(message)) << " '" << gerror->message << "'(" << gerror->code << ") '" << debug << "'");
+
+                    // Workaround for bug..?
+                    if(GST_MESSAGE_SRC(message) == GST_OBJECT(p->pAudiosink)) {
+                        LOG4CXX_WARN(playerImplLog, "Audiosink error, setting state to PLAYING");
+                        gst_element_set_state(p->pPipeline, GST_STATE_PLAYING);
+                        p->mGstPending = GST_STATE_PLAYING;
+                    }
+
+                    // If we recieved an error from datasource retry opening the file
+                    if(GST_MESSAGE_SRC(message) == GST_OBJECT(p->pDatasource)) {
+
+                        // Get variables needed
+                        p->lockMutex(p->dataMutex);
+                        long long int lastplayedms;
+                        if(p->mPlayingms > p->mUnderrunms) lastplayedms = p->mUnderrunms = p->mPlayingms;
+                        else lastplayedms = p->mUnderrunms;
+                        string filename = p->mPlayingFilename;
+                        int retries = p->mOpenRetries;
+                        time_t retrytime = p->mOpentime;
+                        p->unlockMutex(p->dataMutex);
+
+                        if(retries == 0) {
+                            LOG4CXX_ERROR(playerImplLog, "Number of retires exceeded, calling ERROR callback");
+                            if(p->sendERRORSignal() == false) {
+                                // Set state to pausing
+                                p->setState(STOPPED);
+
+                                // Call EOS callback
+                                p->sendEOSSignal();
+                            }
+                            p->mOpenRetries--;
+                        } else if(retries > 0) {
+                            // Call the buffering callback, set state to paused
+                            if(p->sendBUFFERINGSignal() == false && filename != "reopening") {
+
+                                // Set state to pausing
+                                p->setState(PAUSING);
+
+                                // Try reopening from last played position
+                                LOG4CXX_ERROR(playerImplLog, "Reopening " << filename << " at " << lastplayedms << " ms (" << retries -1 << " more retries)");
+
+                                p->lockMutex(p->dataMutex);
+                                p->mPlayingFilename = "reopening";
+                                p->mStartms = lastplayedms;
+                                p->mOpenRetries--;
+                                p->unlockMutex(p->dataMutex);
+
+                                // Check retrytime, wait if less than 10 seconds
+                                int spincnt = 0;
+                                if(retrytime + 10 > time(NULL)) {
+                                    LOG4CXX_ERROR(playerImplLog, "Reopening too fast, waiting..");
+                                    for(int i = 0; i < 100 && !p->getState() != EXITING; i++) {
+                                        usleep(50000);
+                                        spincnt++; if(spincnt > 3) spincnt = 0;
+                                        printf("\rWaiting to reopen [%c]      \r",
+                                                spinner[spincnt]); fflush(stdout);
+                                    }
+                                    printf("\rWaiting to reopen [done]\n");
+                                }
+                            } else {
+                                LOG4CXX_WARN(playerImplLog, "Application handled error");
+                                p->setState(STOPPED);
+                            }
+                        }
+                    }
+
+                    g_error_free (gerror);
+                    g_free (debug);
+                    break;
+                }
+
+            case GST_MESSAGE_STATE_CHANGED:
+                {
+                    if(GST_MESSAGE_SRC(message) == (GstObject*)p->pPipeline) {
+                        GstState oldstate;
+                        gst_message_parse_state_changed (message, &oldstate, &p->mGstState, &p->mGstPending);
+
+                        // Report state changes from PAUSED TO PLAYING AND PLAYING TO PAUSED
+
+                        if(p->mGstPending == GST_STATE_VOID_PENDING &&
+                                (oldstate == GST_STATE_PLAYING || oldstate == GST_STATE_PAUSED ||
+                                 p->mGstState == GST_STATE_PLAYING || p->mGstState == GST_STATE_PLAYING)) {
+                            LOG4CXX_INFO(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(p->mGstState) << " at " << TIME_STR((gint64) (p->position)) <<  " (" << TIME_STR((gint64) (p->mPlayingms * GST_MSECOND)) << ") / " << TIME_STR((gint64) (p->duration)) << " (-" << TIME_STR((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)) << ")");
+                        } else {
+                            LOG4CXX_DEBUG(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(p->mGstState) << " (pending: " << gst_element_state_get_name(p->mGstPending) << ")");
+                        }
+
+                        // Query duration if we come out of PAUSED state
+                        GstFormat fmt = GST_FORMAT_TIME;
+                        if(p->mGstPending == GST_STATE_VOID_PENDING &&  oldstate == GST_STATE_PAUSED) {
+                            gst_element_query_duration (p->pPipeline, &fmt, &p->duration);
+                        }
+
+
+                        // Store the actual pipeline state in the class variable
+                        p->setRealState(p->mGstState, p->mGstPending);
+
+                        // EXECUTE STARTSEEK
+                        if(p->bStartseek &&
+                                // p->mGstState == GST_STATE_PAUSED &&
+                                p->mGstPending == GST_STATE_VOID_PENDING) {
+                            p->lockMutex(p->dataMutex);
+                            gint64 c_seektime = (gint64) ((double)p->mPlayingStartms / p->mPlayingTempo) * GST_MSECOND;
+
+                            // If jumping backwards, go to a point a littlebit before the seekpoint
+                            //if(p->mPlayingms > p->mPlayingStartms)
+
+                            c_seektime -= (SEEKMARGIN_MS * GST_MSECOND);
+                            if(c_seektime < 0) c_seektime = 0;
+
+                            LOG4CXX_INFO(playerImplLog, "Startseeking3 from " << TIME_STR(p->mPlayingms * GST_MSECOND) << " to " << TIME_STR(p->mPlayingStartms * GST_MSECOND) << " (" << TIME_STR(c_seektime) << ")");
+
+                            // Fade in the first few buffers
+                            p->bFadeIn = true;
+                            p->bStartseek = false;
+                            p->unlockMutex(p->dataMutex);
+
+                            if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
+                            {
+                                LOG4CXX_ERROR(playerImplLog, "Seek failed");
+                            }
+                            else
+                            {
+                                LOG4CXX_DEBUG(playerImplLog, "Seek OK");
+                            }
+
+
+                        }
+                    }
+                    break;
+                }
+
+            case GST_MESSAGE_TAG:
+                {
+                    GstTagList *tags;
+                    gchar *elementname = gst_element_get_name(GST_MESSAGE_SRC(message));
+                    LOG4CXX_DEBUG(playerImplLog, "Got tag message from " << elementname);
+
+                    gst_message_parse_tag (message, &tags);
+                    gst_tag_list_foreach (tags, (GstTagForeachFunc)parse_tag, p);
+
+                    gst_tag_list_free (tags);
+                    g_free(elementname);
+                    break;
+                }
+            case GST_MESSAGE_ELEMENT:
+                {
+                    const GstStructure *s = gst_message_get_structure (message);
+                    const gchar *name = gst_structure_get_name (s);
+
+                    if (strcmp (name, "level") == 0) {
+                        gint channels;
+                        GstClockTime endtime;
+                        gdouble //rms_dB, peak_dB,
+                                decay_dB;
+                        //gdouble rms, peak, decay;
+
+                        gdouble currentVol = 1.0;
+
+                        const GValue *list;
+                        const GValue *value;
+                        gint i;
+                        if (!gst_structure_get_clock_time (s, "endtime", &endtime))
+                            g_warning ("Could not parse endtime");
+                        /* we can get the number of channels as the length of any of the value lists */
+
+                        list = gst_structure_get_value (s, "decay");
+                        channels = gst_value_list_get_size (list);
+                        //g_print ("endtime: %" TIME_FORMAT ", channels: %d\n", TIME_ARGS (endtime), channels);
+                        for (i = 0; i < channels; ++i) {
+                            list = gst_structure_get_value (s, "decay");
+                            value = gst_value_list_get_value (list, i);
+                            decay_dB = g_value_get_double (value);
+                            if(decay_dB < -20.0) decay_dB = -20.0;
+
+                            currentVol = (pow(20, -decay_dB / 25));
+                            p->lockMutex(p->dataMutex);
+                            p->mCurrentdB = decay_dB;
+                            p->unlockMutex(p->dataMutex);
+                        }
+
+                        p->lockMutex(p->dataMutex);
+
+                        float volumeDiff = 0;
+
+                        // Try to get the average volume
+
+                        if(p->mAverageFactor > 0.01) p->mAverageFactor -= 0.005;
+                        else p->mAverageFactor = 0.01;
+
+                        if(currentVol > p->mCurrentVolume) p->mCurrentVolume += p->mAverageFactor;
+                        else p->mCurrentVolume = currentVol;
+
+                        p->mAverageVolume = (p->mCurrentVolume * p->mAverageFactor) + (p->mAverageVolume * (1-p->mAverageFactor));
+
+                        if(p->mAverageFactor > 0.01) volumeDiff = p->mCurrentVolume - p->mPlayingVolume;
+                        else volumeDiff = p->mAverageVolume - p->mPlayingVolume;
+
+                        volumeDiff = floor(volumeDiff * 100) / 100.0;
+
+                        // Adjust the playback volume accordingly
+                        if(volumeDiff > 0.01 || volumeDiff < -0.01) {
+                            // Take it easy on the volume increase while calibrating
+                            if(p->mAverageVolume > p->mPlayingVolume)
+                                p->mPlayingVolume += (0.5 - p->mAverageFactor) * volumeDiff;
+                            else
+                                p->mPlayingVolume = p->mAverageVolume;
+
+                            g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
+
+                            if(p->mAverageFactor <= 0.1 && !p->mGotFinalVolume) {
+                                p->mGotFinalVolume = true;
+                                LOG4CXX_WARN(playerImplLog, "setting amplify to " << p->mPlayingVolume);
+                            }
+                        }
+
+                        p->unlockMutex(p->dataMutex);
+                    }
+
+                    break;
+                }
+
+            default:
+                gchar *elementname = gst_element_get_name(GST_MESSAGE_SRC(message));
+                const gchar *messagename = gst_message_type_get_name(GST_MESSAGE_TYPE(message));
+                LOG4CXX_DEBUG(playerImplLog, "Got message from " << elementname << " type: " << messagename);
+                g_free(elementname);
+                break;
+        }
+    }
+    return ret;
 }

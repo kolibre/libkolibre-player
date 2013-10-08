@@ -58,6 +58,7 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
     {
         case Player::PLAYER_CONTINUE:
         case Player::PLAYER_ATEOS:
+        case Player::PLAYER_ERROR:
             exit(1); // these messages shold not be triggered
     }
 
