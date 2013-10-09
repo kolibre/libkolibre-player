@@ -2878,7 +2878,7 @@ void *player_thread(void *player)
         }
 
 
-        if (GST_IS_ELEMENT(p->pPipeline) && (state == PLAYING || state == PAUSING))
+        if (GST_IS_ELEMENT(p->pPipeline) && state == PLAYING)
         {
             p->lockMutex(p->dataMutex);
             bool updatePosition = true;
