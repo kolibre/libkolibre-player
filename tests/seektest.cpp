@@ -21,7 +21,6 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <Player.h>
 
-#include "data.h"
 #include "setup_logging.h"
 #include <boost/bind.hpp>
 

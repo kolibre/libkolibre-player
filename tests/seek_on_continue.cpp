@@ -17,7 +17,6 @@ You should have received a copy of the GNU Lesser General Public License
 along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <cstdlib>
 #include <Player.h>
 
@@ -30,34 +29,36 @@ using namespace std;
 class PlayerControl
 {
     public:
-        int currentitem;
         Player *player;
-        Urls urls;
-        int maxitems;
         int var_argc;
         char **var_argv;
         bool atEOS;
+        bool error;
         string srcDir;
         PlayerControl();
         void play();
         bool enable(int argc, char **argv);
         bool playerMessageSlot(Player::playerMessage message);
         bool playerStateSlot( playerState state );
+        Urls urls;
+        int currentitem;
+        int maxitems;
 };
 
 PlayerControl::PlayerControl():
-    currentitem(0),
     player(Player::Instance()),
+    atEOS(false),
+    error(false),
     urls(initvector()),
-    atEOS(false)
+    currentitem(0)
 {
     player->doOnPlayerMessage( boost::bind(&PlayerControl::playerMessageSlot, this, _1) );
     player->doOnPlayerState( boost::bind(&PlayerControl::playerStateSlot, this, _1) );
-    maxitems = urls.size();
     char* srcdir = getenv("srcdir");
     if(!srcdir)
         srcdir = ".";
     srcDir = string(srcdir);
+    maxitems = urls.size();
 }
 
 bool PlayerControl::playerMessageSlot( Player::playerMessage message )
@@ -96,9 +97,8 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
                 break;
             }
         case Player::PLAYER_ERROR:
-            {
-                atEOS = true;
-            }
+                error = true;
+                return true;
     }
     return false;
 }
@@ -136,15 +136,10 @@ void PlayerControl::play()
     player->open( srcDir + "/" + urls[currentitem].url, urls[currentitem].startms, urls[currentitem].stopms);
     player->resume();
     cout << "\nWaiting for eos or max segments" << maxitems << endl;
-    int time = 0;
-    while(!atEOS && currentitem < maxitems && time < 60){
-        sleep(1);
-        time++;
-    }
+    while (!atEOS && currentitem < maxitems) sleep(1);
 
     cout << "\nPlayer stopped. segments played: " << currentitem << endl;
     assert(currentitem == maxitems);
-    assert(time < 60);
 }
 
 bool PlayerControl::enable( int argc, char **argv )

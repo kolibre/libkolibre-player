@@ -20,7 +20,6 @@ along with kolibre-player. If not, see <http://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <Player.h>
 
-#include "data.h"
 #include "setup_logging.h"
 #include <boost/bind.hpp>
 
@@ -62,6 +61,7 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
             return true;
         case Player::PLAYER_ERROR:
             error = true;
+            return true;
         case Player::PLAYER_ATEOS:
             atEOS = true;
             return true;
@@ -91,12 +91,10 @@ void PlayerControl::play()
 {
     player->open( source );
     player->resume();
-    int i;
-    for ( ; !atEOS && i < 50; i++ ) {
-        sleep(1);
-    }
-    //Assert that test run til end!
-    assert( i >= 50 );
+    while (!atEOS) sleep(1);
+
+    // Assert that test run til end and no errors occurred!
+    assert( atEOS == true );
     assert( error == false );
 }
 

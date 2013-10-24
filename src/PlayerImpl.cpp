@@ -95,7 +95,8 @@ GST_CLOCK_TIME_IS_VALID (t) ? \
 GST_CLOCK_TIME_IS_VALID (t) ? \
 (guint) (((GstClockTime)(t)) / GST_MSECOND % 1000) : 999
 
-#define TIME_STR(t) gst_time_string(t)
+#define TIME_STR(t) gst_time_string((gint64)(t))
+#define TIME_STR_MS(t) gst_time_string(t == UINT_MAX ? (gint64)(t) : (gint64)(t * GST_MSECOND))
 
 // create a logger which will become a child to logger kolibre.player
 log4cxx::LoggerPtr playerImplLog(log4cxx::Logger::getLogger("kolibre.player.playerimpl"));
@@ -568,7 +569,7 @@ void PlayerImpl::open(string filename, long long startms, long long stopms)
         case STOPPED:
             LOG4CXX_INFO(playerImplLog, "Opening '" << filename << "'");
             if(startms != 0 && stopms != UINT_MAX)
-                LOG4CXX_INFO(playerImplLog, "from time " << TIME_STR((gint64)startms*GST_MSECOND) << " -> " << TIME_STR((gint64)stopms*GST_MSECOND));
+                LOG4CXX_INFO(playerImplLog, "from time " << TIME_STR_MS(startms) << " -> " << TIME_STR_MS(stopms));
 
             if(getState() != PLAYING) setState(PAUSING);
 
@@ -2576,7 +2577,7 @@ void *player_thread(void *player)
                 }
                 printf("\rWaiting before committing [done]      \r");
 
-                LOG4CXX_INFO(playerImplLog, "Got new Filename: '" << p->mFilename << "': " << TIME_STR(p->mStartms*GST_MSECOND) <<  "->" << TIME_STR(p->mStopms*GST_MSECOND));
+                LOG4CXX_INFO(playerImplLog, "Got new Filename: '" << p->mFilename << "': " << TIME_STR_MS(p->mStartms) <<  "->" << TIME_STR_MS(p->mStopms));
 
                 //} else {
                 //LOG4CXX_WARN(playerImpleLog, "Got new Filename: '" << p->mFilename << "': '" << p->mStartms << "'->'" << p->mStopms << "'");
@@ -2601,7 +2602,7 @@ void *player_thread(void *player)
         } else if(p->mStartms != p->mPlayingStartms ||
                 p->mStopms != p->mPlayingStopms ||
                 p->bOpenSignal == true) {
-            LOG4CXX_INFO(playerImplLog, "Got new Positions: '" << p->mFilename << "': " << TIME_STR(p->mStartms*GST_MSECOND) <<  "->'" << TIME_STR(p->mStopms*GST_MSECOND));
+            LOG4CXX_INFO(playerImplLog, "Got new Positions: '" << p->mFilename << "': " << TIME_STR_MS(p->mStartms) <<  "->'" << TIME_STR_MS(p->mStopms));
 
             // If this is a continuation clip,
             // and the mPlayingms is already in this clip -> don't seek
@@ -2705,7 +2706,7 @@ void *player_thread(void *player)
                                     c_seektime -= (SEEKMARGIN_MS * GST_MSECOND);
                                     if(c_seektime < 0) c_seektime = 0;
 
-                                    LOG4CXX_INFO(playerImplLog, "Startseeking1 from " << TIME_STR(p->mPlayingms * GST_MSECOND) << " to " << TIME_STR(p->mPlayingStartms * GST_MSECOND) << " (" << TIME_STR(c_seektime) << ")");
+                                    LOG4CXX_INFO(playerImplLog, "Startseeking1 from " << TIME_STR_MS(p->mPlayingms) << " to " << TIME_STR_MS(p->mPlayingStartms) << " (" << TIME_STR(c_seektime) << ")");
 
                                     p->unlockMutex(p->dataMutex);
 
@@ -2739,7 +2740,7 @@ void *player_thread(void *player)
                                     c_seektime -= (SEEKMARGIN_MS * GST_MSECOND);
                                     if(c_seektime < 0) c_seektime = 0;
 
-                                    LOG4CXX_INFO(playerImplLog, "Startseeking2 from " << TIME_STR(p->mPlayingms * GST_MSECOND) << " to " << TIME_STR(p->mPlayingStartms * GST_MSECOND) << " (" << TIME_STR(c_seektime) << ")");
+                                    LOG4CXX_INFO(playerImplLog, "Startseeking2 from " << TIME_STR_MS(p->mPlayingms) << " to " << TIME_STR_MS(p->mPlayingStartms) << " (" << TIME_STR(c_seektime) << ")");
 
                                     p->unlockMutex(p->dataMutex);
 
@@ -2877,7 +2878,7 @@ void *player_thread(void *player)
         }
 
 
-        if (GST_IS_ELEMENT(p->pPipeline) && (state == PLAYING || state == PAUSING))
+        if (GST_IS_ELEMENT(p->pPipeline) && state == PLAYING)
         {
             p->lockMutex(p->dataMutex);
             bool updatePosition = true;
@@ -2927,6 +2928,12 @@ void *player_thread(void *player)
                         );
                 */
 #else
+                long long int remaining = 0;
+                if (p->mPlayingStopms == UINT_MAX) {
+                    remaining = p->duration - p->position;
+                } else {
+                    remaining = (p->mPlayingStopms - p->mPlayingms) * GST_MSECOND;
+                }
                 printf("%s(%s) %" TIME_FORMAT " (%" TIME_FORMAT") "
                         "/ %" TIME_FORMAT" (-%" TIME_FORMAT ") (%s:%2.2f D:%2.2f)          \r",
                         p->shortstrState(p->getRealState()).c_str(),
@@ -2934,7 +2941,7 @@ void *player_thread(void *player)
                         TIME_ARGS((gint64) (p->position)),
                         TIME_ARGS((gint64) (p->mPlayingms * GST_MSECOND)),
                         TIME_ARGS((gint64) (p->duration)),
-                        TIME_ARGS((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)),
+                        TIME_ARGS((gint64) (remaining)),
                         (p->mAverageFactor > 0.01) ? "Vc" : "V",
                         p->mPlayingVolume,
                         p->mCurrentdB
@@ -2968,7 +2975,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
 
         switch (message->type) {
             case GST_MESSAGE_EOS:
-                LOG4CXX_WARN(playerImplLog, "Recieved EOS at " << TIME_STR((gint64) (p->position)) << " (" << TIME_STR((gint64) (p->mPlayingms * GST_MSECOND)) << ") / " << TIME_STR((gint64) (p->duration)) << " (-" << TIME_STR((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)) << ")");
+                LOG4CXX_WARN(playerImplLog, "Recieved EOS at " << TIME_STR(p->position) << " (" << TIME_STR_MS(p->mPlayingms) << ") / " << TIME_STR(p->duration) << " (-" << TIME_STR_MS(p->mPlayingStopms - p->mPlayingms) << ")");
 
                 ret = false;
                 p->lockMutex(p->dataMutex);
@@ -3091,7 +3098,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                         if(p->mGstPending == GST_STATE_VOID_PENDING &&
                                 (oldstate == GST_STATE_PLAYING || oldstate == GST_STATE_PAUSED ||
                                  p->mGstState == GST_STATE_PLAYING || p->mGstState == GST_STATE_PLAYING)) {
-                            LOG4CXX_INFO(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(p->mGstState) << " at " << TIME_STR((gint64) (p->position)) <<  " (" << TIME_STR((gint64) (p->mPlayingms * GST_MSECOND)) << ") / " << TIME_STR((gint64) (p->duration)) << " (-" << TIME_STR((gint64) ((p->mPlayingStopms - p->mPlayingms) * GST_MSECOND)) << ")");
+                            LOG4CXX_INFO(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(p->mGstState) << " at " << TIME_STR(p->position) <<  " (" << TIME_STR_MS(p->mPlayingms) << ") / " << TIME_STR(p->duration) << " (-" << TIME_STR_MS(p->mPlayingStopms - p->mPlayingms) << ")");
                         } else {
                             LOG4CXX_DEBUG(playerImplLog, gst_element_state_get_name(oldstate) << " -> " << gst_element_state_get_name(p->mGstState) << " (pending: " << gst_element_state_get_name(p->mGstPending) << ")");
                         }
@@ -3119,7 +3126,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                             c_seektime -= (SEEKMARGIN_MS * GST_MSECOND);
                             if(c_seektime < 0) c_seektime = 0;
 
-                            LOG4CXX_INFO(playerImplLog, "Startseeking3 from " << TIME_STR(p->mPlayingms * GST_MSECOND) << " to " << TIME_STR(p->mPlayingStartms * GST_MSECOND) << " (" << TIME_STR(c_seektime) << ")");
+                            LOG4CXX_INFO(playerImplLog, "Startseeking3 from " << TIME_STR_MS(p->mPlayingms) << " to " << TIME_STR_MS(p->mPlayingStartms) << " (" << TIME_STR(c_seektime) << ")");
 
                             // Fade in the first few buffers
                             p->bFadeIn = true;
