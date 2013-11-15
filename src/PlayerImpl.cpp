@@ -2877,6 +2877,9 @@ void *player_thread(void *player)
                                 LOG4CXX_DEBUG(playerImplLog, "Setting Realstate to PAUSED");
                                 gst_element_set_state(p->pPipeline, GST_STATE_PAUSED);
                                 p->mGstPending = GST_STATE_PAUSED;
+                                if(p->waitStateChange() == bError)
+                                    LOG4CXX_WARN(playerImplLog, "Failed to change state to paused");
+
                                 // seek backwards to compensate for fadein and half frames
                                 p->mStartms = max(p->mPlayingms+PAUSE_SEEKS_BACKWARDS_MS,p->mStartms);
                                 p->mPlayingStartms = -1;
