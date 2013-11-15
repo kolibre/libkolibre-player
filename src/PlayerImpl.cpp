@@ -2694,8 +2694,12 @@ void *player_thread(void *player)
                 if(p->mPlayingms - NEWPOSFLEX_MS > p->mPlayingStartms)
                     LOG4CXX_INFO(playerImplLog, "Startseek necessary since: " << p->mPlayingms - NEWPOSFLEX_MS << " > " << p->mPlayingStartms);
 
-                LOG4CXX_DEBUG(playerImplLog, "Setting state to PAUSED");
-                gst_element_set_state(p->pPipeline, GST_STATE_PAUSED);
+                if(p->mGstState != GST_STATE_PAUSED){
+                    LOG4CXX_DEBUG(playerImplLog, "Setting state to PAUSED");
+                    gst_element_set_state(p->pPipeline, GST_STATE_PAUSED);
+                    if(p->waitStateChange() == bError)
+                        LOG4CXX_WARN(playerImplLog, "Failed to change state to paused");
+                }
 
 #ifdef ENABLE_AMPLIFY
                 g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
