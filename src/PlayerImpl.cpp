@@ -184,6 +184,7 @@ PlayerImpl::PlayerImpl():
 
     serverTimedOut = false;
     bEOSCalledAlreadyForThisFile = false;
+    duration = GST_CLOCK_TIME_NONE;
 }
 
 /**
@@ -2937,11 +2938,13 @@ void *player_thread(void *player)
                 updatePosition = false;
             }
 
-            LOG4CXX_TRACE(playerImplLog, "Querying stream duration");
-            if (!gst_element_query_duration (p->pPipeline, &fmt, &p->duration))
-            {
-                LOG4CXX_WARN(playerImplLog, "Duration query failed");
-                updatePosition = false;
+            if (!GST_CLOCK_TIME_IS_VALID (p->duration)) {
+                LOG4CXX_TRACE(playerImplLog, "Querying stream duration");
+                if (!gst_element_query_duration (p->pPipeline, &fmt, &p->duration))
+                {
+                    LOG4CXX_WARN(playerImplLog, "Duration query failed");
+                    updatePosition = false;
+                }
             }
 
             if (updatePosition)
@@ -3132,7 +3135,11 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                     g_free (debug);
                     break;
                 }
-
+            case GST_MESSAGE_DURATION: {
+                    /* The duration has changed, mark the current one as invalid */
+                    p->duration = GST_CLOCK_TIME_NONE;
+                    break;
+                }
             case GST_MESSAGE_STATE_CHANGED:
                 {
                     if(GST_MESSAGE_SRC(message) == (GstObject*)p->pPipeline) {
@@ -3151,7 +3158,7 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
 
                         // Query duration if we come out of PAUSED state
                         GstFormat fmt = GST_FORMAT_TIME;
-                        if(p->mGstPending == GST_STATE_VOID_PENDING &&  oldstate == GST_STATE_PAUSED) {
+                        if(!GST_CLOCK_TIME_IS_VALID (p->duration)) {
                             gst_element_query_duration (p->pPipeline, &fmt, &p->duration);
                         }
 
