@@ -2712,14 +2712,18 @@ void *player_thread(void *player)
         }
 
         // Handle messages here
-        if(p->pBus && gst_bus_have_pending(p->pBus)){
-            GstMessage *bus_message;
-            bus_message = gst_bus_pop(p->pBus);
+        GstMessage *bus_message = NULL;
+        if(p->pBus)
+            bus_message = gst_bus_timed_pop(p->pBus, 10 * GST_MSECOND);
+        else
+            usleep(50000);
+
+        if (bus_message != NULL) {
             handle_bus_message(bus_message, p);
             gst_message_unref(bus_message);
         }
-
-        if(p->mGstPending == GST_STATE_VOID_PENDING) {
+        else if (p->mGstPending == GST_STATE_VOID_PENDING) {
+            state = p->getState();
 
             // Get the Gstreamer current state
             switch(p->mGstState)
@@ -3001,8 +3005,6 @@ void *player_thread(void *player)
             p->unlockMutex(p->dataMutex);
         }
 
-        usleep(10000);
-        state = p->getState();
     }
 
     LOG4CXX_WARN(playerImplLog, "Shutting down playbackthread");
