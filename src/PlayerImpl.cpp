@@ -2671,9 +2671,11 @@ void *player_thread(void *player)
             // Open a new file
             openNewFile = false;
             p->setRealState(GST_STATE_READY, GST_STATE_PAUSED);
+            if( p->waitStateChange() == bError )
+                LOG4CXX_WARN(playerImplLog, "Failed to change state to paused");
             if( p->setupPipeline() ){
-                 LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline");
-                 p->sendERRORSignal();
+                LOG4CXX_ERROR(playerImplLog, "Failed to setup pipeline");
+                p->sendERRORSignal();
             }
             p->lockMutex(p->dataMutex);
             if(p->mPlayingStartms != 0) p->bStartseek = true;
