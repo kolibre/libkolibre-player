@@ -2552,6 +2552,7 @@ void *player_thread(void *player)
     bool openNewFile = false;
     bool openNewPosition = false;
     p->bStartseek = false;
+    p->bWaitAsync = false;
 
     double currentTempo = p->mPlayingTempo;
     double currentPitch;
@@ -2633,7 +2634,7 @@ void *player_thread(void *player)
             p->bFadeIn = true;
             p->bEOSCalledAlreadyForThisFile = false;
 
-        } else if(!p->bStartseek && (p->mStartms != p->mPlayingStartms ||
+        } else if(!p->bWaitAsync && (p->mStartms != p->mPlayingStartms ||
                 p->mStopms != p->mPlayingStopms ||
                 p->bOpenSignal == true)) {
             LOG4CXX_INFO(playerImplLog, "Got new Positions: '" << p->mFilename << "': " << TIME_STR_MS(p->mStartms) <<  "->'" << TIME_STR_MS(p->mStopms));
@@ -2773,11 +2774,9 @@ void *player_thread(void *player)
                                         p->bWaitAsync = true;
                                         p->unlockMutex(p->dataMutex);
                                     }
-                                    else {
-                                        p->lockMutex(p->dataMutex);
-                                        p->bStartseek = false;
-                                        p->unlockMutex(p->dataMutex);
-                                    }
+                                    p->lockMutex(p->dataMutex);
+                                    p->bStartseek = false;
+                                    p->unlockMutex(p->dataMutex);
                                 }
 
                                 break;
@@ -2813,11 +2812,9 @@ void *player_thread(void *player)
                                         p->bWaitAsync = true;
                                         p->unlockMutex(p->dataMutex);
                                     }
-                                    else {
-                                        p->lockMutex(p->dataMutex);
-                                        p->bStartseek = false;
-                                        p->unlockMutex(p->dataMutex);
-                                    }
+                                    p->lockMutex(p->dataMutex);
+                                    p->bStartseek = false;
+                                    p->unlockMutex(p->dataMutex);
                                 }
 
                                 // Check for speed change
@@ -3037,6 +3034,7 @@ void *player_thread(void *player)
 bool handle_bus_message(GstMessage *message, PlayerImpl *p){
     // Check and process messages from GStreamer
     bool ret;
+    bool waitAsync;
     LOG4CXX_TRACE(playerImplLog, "Got message from " << gst_element_get_name(GST_MESSAGE_SRC(message)) << " type: " << gst_message_type_get_name(GST_MESSAGE_TYPE(message)));
     if(p->pBus != NULL) {
 
@@ -3049,9 +3047,18 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                 if(p->mPlayingFilename == "reopening") ret = true;
                 p->unlockMutex(p->dataMutex);
 
+                p->lockMutex(p->dataMutex);
+                waitAsync = p->bWaitAsync;
+                p->unlockMutex(p->dataMutex);
+
+
                 if(ret)
                 {
                     LOG4CXX_WARN(playerImplLog, "Not calling EOS callback, reopening file");
+                }
+                else if (waitAsync)
+                {
+                	LOG4CXX_WARN(playerImplLog, "Not calling EOS callback, waiting for async operation");
                 }
                 else
                 {
@@ -3065,6 +3072,9 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                 break;
 
             case GST_MESSAGE_WARNING:
+            	{
+            		LOG4CXX_WARN(playerImplLog, "Got message from " << gst_element_get_name(GST_MESSAGE_SRC(message)) << " type: " << gst_message_type_get_name(GST_MESSAGE_TYPE(message)));
+            	}
             case GST_MESSAGE_ERROR:
                 {
                     GError *gerror;
@@ -3159,9 +3169,9 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                     break;
                 }
             case GST_MESSAGE_ASYNC_DONE: {
+                	LOG4CXX_DEBUG(playerImplLog, "Async done!");
                     p->lockMutex(p->dataMutex);
                     p->bWaitAsync = false;
-                    p->bStartseek = false;
                     p->unlockMutex(p->dataMutex);
                     break;
                 }
@@ -3225,11 +3235,10 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                                 p->bWaitAsync = true;
                                 p->unlockMutex(p->dataMutex);
                             }
-                            else {
-                                p->lockMutex(p->dataMutex);
-                                p->bStartseek = false;
-                                p->unlockMutex(p->dataMutex);
-                            }
+
+							p->lockMutex(p->dataMutex);
+							p->bStartseek = false;
+							p->unlockMutex(p->dataMutex);
 
                         }
                     }
