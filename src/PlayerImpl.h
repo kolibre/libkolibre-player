@@ -220,6 +220,7 @@ struct PlayerImpl
     bool mPlayingWaiting; // Flag is set when we're waiting for new position
     bool mGotFinalVolume;
     bool bStartseek;
+    bool bWaitAsync;
     float mPlayingVolume;
     float mCompressorRatio;
     float mCurrentVolume;
