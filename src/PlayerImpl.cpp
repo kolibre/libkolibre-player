@@ -2724,7 +2724,7 @@ void *player_thread(void *player)
             handle_bus_message(bus_message, p);
             gst_message_unref(bus_message);
         }
-        else if (p->mGstPending == GST_STATE_VOID_PENDING) {
+        else if (!p->bWaitAsync && p->mGstPending == GST_STATE_VOID_PENDING) {
             state = p->getState();
 
             // Get the Gstreamer current state
@@ -2797,6 +2797,10 @@ void *player_thread(void *player)
                                     else
                                     {
                                         LOG4CXX_DEBUG(playerImplLog, "Seek OK");
+                                    }
+                                    if ( GST_STATE_CHANGE_ASYNC == gst_element_get_state( p->pPipeline, NULL, NULL, 0 ) ){
+                                        LOG4CXX_DEBUG(playerImplLog, "Gstreamer is seeking asynchronously");
+                                        p->bWaitAsync = true;
                                     }
 
                                     p->lockMutex(p->dataMutex);
@@ -3144,6 +3148,10 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                     p->duration = GST_CLOCK_TIME_NONE;
                     break;
                 }
+            case GST_MESSAGE_ASYNC_DONE: {
+                    p->bWaitAsync = false;
+                    break;
+                }
             case GST_MESSAGE_STATE_CHANGED:
                 {
                     if(GST_MESSAGE_SRC(message) == (GstObject*)p->pPipeline) {
@@ -3199,6 +3207,10 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                                 LOG4CXX_DEBUG(playerImplLog, "Seek OK");
                             }
 
+                            if ( GST_STATE_CHANGE_ASYNC == gst_element_get_state( p->pPipeline, NULL, NULL, 0 ) ){
+                                LOG4CXX_DEBUG(playerImplLog, "Gstreamer is seeking asynchronously");
+                                p->bWaitAsync = true;
+                            }
 
                         }
                     }
