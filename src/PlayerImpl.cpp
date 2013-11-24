@@ -645,13 +645,18 @@ void PlayerImpl::seekPos(long long int seektime)
                     LOG4CXX_ERROR(playerImplLog, "Seek to " << seektime << " in '" << filename << "' failed");
                     return;
                 }
-                else
-                {
-                    LOG4CXX_DEBUG(playerImplLog, "Seek OK");
+                if ( GST_STATE_CHANGE_ASYNC == gst_element_get_state( pPipeline, NULL, NULL, 0 ) ){
+                    LOG4CXX_DEBUG(playerImplLog, "Gstreamer is seeking asynchronously");
                     lockMutex(dataMutex);
-                    bFadeIn = true;
+                    bWaitAsync = true;
                     unlockMutex(dataMutex);
                 }
+
+                LOG4CXX_DEBUG(playerImplLog, "Seek OK");
+                lockMutex(dataMutex);
+                bFadeIn = true;
+                unlockMutex(dataMutex);
+
 
                 //usleep(500000);
                 //LOG4CXX_WARN(playerImpleLog, "setting amplify to 0.0 between ("<< TIME_STR(o_seektime) << ") and (" << TIME_STR(o_seektime+500*GST_MSECOND) << ")");
