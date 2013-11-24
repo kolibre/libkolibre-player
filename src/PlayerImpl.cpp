@@ -2633,9 +2633,9 @@ void *player_thread(void *player)
             p->bFadeIn = true;
             p->bEOSCalledAlreadyForThisFile = false;
 
-        } else if(p->mStartms != p->mPlayingStartms ||
+        } else if(!p->bStartseek && (p->mStartms != p->mPlayingStartms ||
                 p->mStopms != p->mPlayingStopms ||
-                p->bOpenSignal == true) {
+                p->bOpenSignal == true)) {
             LOG4CXX_INFO(playerImplLog, "Got new Positions: '" << p->mFilename << "': " << TIME_STR_MS(p->mStartms) <<  "->'" << TIME_STR_MS(p->mStopms));
 
             // If this is a continuation clip,
@@ -2753,6 +2753,8 @@ void *player_thread(void *player)
                                     if(c_seektime < 0) c_seektime = 0;
 
                                     LOG4CXX_INFO(playerImplLog, "Startseeking1 from " << TIME_STR_MS(p->mPlayingms) << " to " << TIME_STR_MS(p->mPlayingStartms) << " (" << TIME_STR(c_seektime) << ")");
+                                    // Fade in the first few buffers
+                                    p->bFadeIn = true;
 
                                     p->unlockMutex(p->dataMutex);
 
@@ -2765,11 +2767,17 @@ void *player_thread(void *player)
                                         LOG4CXX_DEBUG(playerImplLog, "Seek ok");
                                     }
 
-                                    p->lockMutex(p->dataMutex);
-                                    // Fade in the first few buffers
-                                    p->bFadeIn = true;
-                                    p->bStartseek = false;
-                                    p->unlockMutex(p->dataMutex);
+                                    if ( GST_STATE_CHANGE_ASYNC == gst_element_get_state( p->pPipeline, NULL, NULL, 0 ) ){
+                                        LOG4CXX_DEBUG(playerImplLog, "Gstreamer is seeking asynchronously");
+                                        p->lockMutex(p->dataMutex);
+                                        p->bWaitAsync = true;
+                                        p->unlockMutex(p->dataMutex);
+                                    }
+                                    else {
+                                        p->lockMutex(p->dataMutex);
+                                        p->bStartseek = false;
+                                        p->unlockMutex(p->dataMutex);
+                                    }
                                 }
 
                                 break;
@@ -2787,6 +2795,7 @@ void *player_thread(void *player)
                                     if(c_seektime < 0) c_seektime = 0;
 
                                     LOG4CXX_INFO(playerImplLog, "Startseeking2 from " << TIME_STR_MS(p->mPlayingms) << " to " << TIME_STR_MS(p->mPlayingStartms) << " (" << TIME_STR(c_seektime) << ")");
+                                    p->bFadeIn = true;
 
                                     p->unlockMutex(p->dataMutex);
 
@@ -2800,14 +2809,15 @@ void *player_thread(void *player)
                                     }
                                     if ( GST_STATE_CHANGE_ASYNC == gst_element_get_state( p->pPipeline, NULL, NULL, 0 ) ){
                                         LOG4CXX_DEBUG(playerImplLog, "Gstreamer is seeking asynchronously");
+                                        p->lockMutex(p->dataMutex);
                                         p->bWaitAsync = true;
+                                        p->unlockMutex(p->dataMutex);
                                     }
-
-                                    p->lockMutex(p->dataMutex);
-                                    // Fade in the first few buffers
-                                    p->bFadeIn = true;
-                                    p->bStartseek = false;
-                                    p->unlockMutex(p->dataMutex);
+                                    else {
+                                        p->lockMutex(p->dataMutex);
+                                        p->bStartseek = false;
+                                        p->unlockMutex(p->dataMutex);
+                                    }
                                 }
 
                                 // Check for speed change
@@ -3149,7 +3159,10 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                     break;
                 }
             case GST_MESSAGE_ASYNC_DONE: {
+                    p->lockMutex(p->dataMutex);
                     p->bWaitAsync = false;
+                    p->bStartseek = false;
+                    p->unlockMutex(p->dataMutex);
                     break;
                 }
             case GST_MESSAGE_STATE_CHANGED:
@@ -3195,7 +3208,6 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
 
                             // Fade in the first few buffers
                             p->bFadeIn = true;
-                            p->bStartseek = false;
                             p->unlockMutex(p->dataMutex);
 
                             if (!gst_element_seek_simple (p->pPipeline, GST_FORMAT_TIME, (GstSeekFlags)(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT), c_seektime))
@@ -3209,7 +3221,14 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
 
                             if ( GST_STATE_CHANGE_ASYNC == gst_element_get_state( p->pPipeline, NULL, NULL, 0 ) ){
                                 LOG4CXX_DEBUG(playerImplLog, "Gstreamer is seeking asynchronously");
+                                p->lockMutex(p->dataMutex);
                                 p->bWaitAsync = true;
+                                p->unlockMutex(p->dataMutex);
+                            }
+                            else {
+                                p->lockMutex(p->dataMutex);
+                                p->bStartseek = false;
+                                p->unlockMutex(p->dataMutex);
                             }
 
                         }
