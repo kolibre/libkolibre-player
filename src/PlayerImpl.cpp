@@ -1632,12 +1632,15 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 #ifdef ENABLE_PITCH
     pPitch = gst_element_factory_make("pitch", "pPitch");
 #endif
+#ifdef ENABLE_AMPLIFY
+    pLevel = gst_element_factory_make("level", "pLevel");
     pAmplify = gst_element_factory_make("audioamplify", "pAmplify");
+#endif
 #ifdef ENABLE_EQUALIZER
     pEqualizer = gst_element_factory_make("equalizer-10bands", "pEqualizer");
 #endif
     pAudioconvert2 = gst_element_factory_make("audioconvert", "pAudioconvert2");
-    pLevel = gst_element_factory_make("level", "pLevel");
+
 
 #ifdef WIN32
     pAudiosink = gst_element_factory_make("directsoundsink", "pAudiosink");
@@ -1657,8 +1660,10 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 #ifdef ENABLE_EQUALIZER
             !pEqualizer     ||
 #endif
+#ifdef ENABLE_AMPLIFY
             !pLevel         ||
             !pAmplify       ||
+#endif
             !pAudiosink) goto fail;
 
 
@@ -1671,7 +1676,10 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
             pEqualizer,
 #endif
             pAudioconvert2,
-            pLevel, pAmplify,
+#ifdef ENABLE_AMPLIFY
+            pLevel,
+            pAmplify,
+#endif
             pAudiosink, NULL);
 
 #ifdef ENABLE_PITCH
@@ -1688,12 +1696,14 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
     setEqualizer(pEqualizer, mPlayingBass, mPlayingTreble);
 #endif
 
+#ifdef ENABLE_AMPLIFY
     g_object_set(pLevel, "peak-ttl", levelPeakttl, NULL);
     g_object_set(pLevel, "interval", levelInterval, NULL);
     g_object_set(pLevel, "peak-falloff", levelPeakfalloff, NULL);
 
     mPlayingVolumeGain = mVolumeGain;
     g_object_set(pAmplify, "amplification", mPlayingVolume*mPlayingVolumeGain, NULL);
+#endif
 
     //g_object_set(pAmplify, "amplification", 0.0, NULL);
     //g_object_set(pAmplify, "clipping-method",
@@ -1713,7 +1723,9 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
                 pEqualizer,
 #endif
                 pAudioconvert2,
+#ifdef ENABLE_AMPLIFY
                 pLevel, pAmplify,
+#endif
                 pAudiosink, NULL)) goto fail;
 
 
@@ -1735,8 +1747,10 @@ fail:
     LOG4CXX_ERROR(playerImplLog, "equalizer:      " << (pEqualizer ? "OK" : "failed"));
 #endif
     LOG4CXX_ERROR(playerImplLog, "audioconvert2:  " << (pAudioconvert2 ? "OK" : "failed"));
+#ifdef ENABLE_AMPLIFY
     LOG4CXX_ERROR(playerImplLog, "level:          " << (pLevel ? "OK" : "failed"));
     LOG4CXX_ERROR(playerImplLog, "amplify:        " << (pAmplify ? "OK" : "failed"));
+#endif
     LOG4CXX_ERROR(playerImplLog, "audiosink:      " << (pAudiosink ? "OK" : "failed"));
 
     return NULL;
@@ -2101,9 +2115,11 @@ bool PlayerImpl::destroyPipeline()
             if(pEqualizer != NULL) gst_object_unref(pEqualizer);
 #endif
             if(pAudioconvert2 != NULL) gst_object_unref(pAudioconvert1);
-            if(pLevel != NULL) gst_object_unref(pLevel);
             if(pQueue != NULL) gst_object_unref(pQueue);
+#ifdef ENABLE_AMPLIFY
+            if(pLevel != NULL) gst_object_unref(pLevel);
             if(pAmplify != NULL) gst_object_unref(pAmplify);
+#endif
             if(pAudiosink != NULL) gst_object_unref(pAudiosink);
             if(pBus != NULL) gst_object_unref(pBus);
             if(pPipeline != NULL) gst_object_unref(pAudiosink);
@@ -2681,7 +2697,9 @@ void *player_thread(void *player)
                 LOG4CXX_DEBUG(playerImplLog, "Setting state to PAUSED");
                 gst_element_set_state(p->pPipeline, GST_STATE_PAUSED);
 
+#ifdef ENABLE_AMPLIFY
                 g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
+#endif
 
                 p->bStartseek = true;
             }
@@ -2793,7 +2811,9 @@ void *player_thread(void *player)
                                     LOG4CXX_INFO(playerImplLog, "Setting pitch to: '" << currentPitch << "'");
                                     g_object_set(p->pPitch, "pitch", currentPitch, NULL);
 #endif
+#ifdef ENABLE_AMPLIFY
                                     g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
+#endif
 
                                 } else {
                                     p->unlockMutex(p->dataMutex);
@@ -2825,7 +2845,9 @@ void *player_thread(void *player)
                                     p->unlockMutex(p->dataMutex);
 
                                     LOG4CXX_INFO(playerImplLog, "Setting volumegain to: '" << currentVolumeGain << "'");
+#ifdef ENABLE_AMPLIFY
                                     g_object_set(G_OBJECT (p->pAmplify), "amplification", volume*currentVolumeGain, NULL);
+#endif
                                 } else {
                                     p->unlockMutex(p->dataMutex);
                                 }
@@ -3240,8 +3262,9 @@ bool handle_bus_message(GstMessage *message, PlayerImpl *p){
                                 p->mPlayingVolume += (0.5 - p->mAverageFactor) * volumeDiff;
                             else
                                 p->mPlayingVolume = p->mAverageVolume;
-
+#ifdef ENABLE_AMPLIFY
                             g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
+#endif
 
                             if(p->mAverageFactor <= 0.1 && !p->mGotFinalVolume) {
                                 p->mGotFinalVolume = true;
