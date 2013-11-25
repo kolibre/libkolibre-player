@@ -1031,7 +1031,9 @@ void PlayerImpl::setTempo(double value)
             if(pPitch != NULL)
             {
                 LOG4CXX_INFO(playerImplLog, "setting tempo to: " << value);
+#ifdef ENABLE_PITCH
                 g_object_set(pPitch, "tempo", value, NULL);
+#endif
             }
             break;
         default:
@@ -1627,7 +1629,9 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
     GstPad *pad;
 
     pAudioconvert1 = gst_element_factory_make("audioconvert", "pAudioconvert1");
+#ifdef ENABLE_PITCH
     pPitch = gst_element_factory_make("pitch", "pPitch");
+#endif
     pAmplify = gst_element_factory_make("audioamplify", "pAmplify");
 #ifdef ENABLE_EQUALIZER
     pEqualizer = gst_element_factory_make("equalizer-10bands", "pEqualizer");
@@ -1646,7 +1650,9 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 #endif
     // Check that the elements got set up
     if (!pAudioconvert1 ||
+#ifdef ENABLE_PITCH
             !pPitch         ||
+#endif
             !pAudioconvert2 ||
 #ifdef ENABLE_EQUALIZER
             !pEqualizer     ||
@@ -1657,7 +1663,10 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 
 
     // Add the elements to the bin
-    gst_bin_add_many (bin, pAudioconvert1, pPitch,
+    gst_bin_add_many (bin, pAudioconvert1,
+#ifdef ENABLE_PITCH
+            pPitch,
+#endif
 #ifdef ENABLE_EQUALIZER
             pEqualizer,
 #endif
@@ -1665,12 +1674,13 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
             pLevel, pAmplify,
             pAudiosink, NULL);
 
-
+#ifdef ENABLE_PITCH
     mPlayingTempo = mTempo;
     g_object_set(pPitch, "tempo", mPlayingTempo, NULL);
 
     mPlayingPitch = mPitch;
     g_object_set(pPitch, "pitch", mPlayingPitch, NULL);
+#endif
 
 #ifdef ENABLE_EQUALIZER
     mPlayingBass = mBass;
@@ -1695,7 +1705,10 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
     //g_object_set(pAudiosink, "provide-clock", TRUE, NULL);
 
     // Link the elements
-    if(!gst_element_link_many (pAudioconvert1, pPitch,
+    if(!gst_element_link_many (pAudioconvert1,
+#ifdef ENABLE_PITCH
+            pPitch,
+#endif
 #ifdef ENABLE_EQUALIZER
                 pEqualizer,
 #endif
@@ -1715,7 +1728,9 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 
 fail:
     LOG4CXX_ERROR(playerImplLog, "audioconvert1:  " << (pAudioconvert1 ? "OK" : "failed"));
+#ifdef ENABLE_PITCH
     LOG4CXX_ERROR(playerImplLog, "pitch:          " << (pPitch ? "OK" : "failed"));
+#endif
 #ifdef ENABLE_EQUALIZER
     LOG4CXX_ERROR(playerImplLog, "equalizer:      " << (pEqualizer ? "OK" : "failed"));
 #endif
@@ -2079,7 +2094,9 @@ bool PlayerImpl::destroyPipeline()
             if(pCddasrc != NULL) gst_object_unref(pCddasrc);
             if(pDecodebin != NULL) gst_object_unref(pDecodebin);
             if(pAudioconvert1 != NULL) gst_object_unref(pAudioconvert1);
+#ifdef ENABLE_PITCH
             if(pPitch != NULL) gst_object_unref(pPitch);
+#endif
 #ifdef ENABLE_EQUALIZER
             if(pEqualizer != NULL) gst_object_unref(pEqualizer);
 #endif
@@ -2769,13 +2786,13 @@ void *player_thread(void *player)
                                     currentTempo = p->mPlayingTempo = p->mTempo;
                                     currentPitch = p->mPlayingPitch = p->mPitch;
                                     p->unlockMutex(p->dataMutex);
-
+#ifdef ENABLE_PITCH
                                     LOG4CXX_INFO(playerImplLog, "Setting tempo to: '" << currentTempo << "'");
                                     g_object_set(p->pPitch, "tempo", currentTempo, NULL);
 
                                     LOG4CXX_INFO(playerImplLog, "Setting pitch to: '" << currentPitch << "'");
                                     g_object_set(p->pPitch, "pitch", currentPitch, NULL);
-
+#endif
                                     g_object_set(G_OBJECT (p->pAmplify), "amplification", p->mPlayingVolume*p->mPlayingVolumeGain, NULL);
 
                                 } else {
