@@ -2908,8 +2908,8 @@ void *player_thread(void *player)
                                     LOG4CXX_WARN(playerImplLog, "Failed to change state to paused");
 
                                 // seek backwards to compensate for fadein and half frames
-                                p->mStartms = max(p->mPlayingms+PAUSE_SEEKS_BACKWARDS_MS,p->mStartms);
-                                p->mPlayingStartms = -1;
+                                //p->mStartms = max(p->mPlayingms+PAUSE_SEEKS_BACKWARDS_MS,p->mStartms);
+                                //p->mPlayingStartms = -1;
 
                                 break;
                             case STOPPED:
