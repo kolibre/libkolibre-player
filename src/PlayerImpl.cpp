@@ -694,7 +694,6 @@ void PlayerImpl::reopen()
         lockMutex(dataMutex);
         serverTimedOut = pausePosition.olderThan( REOPEN_AFTER_PAUSING_SEC );
         unlockMutex(dataMutex);
-        pausePosition.open(*this, -1000);
     }
 }
 
