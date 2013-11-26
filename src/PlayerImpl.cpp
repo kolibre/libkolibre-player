@@ -2725,6 +2725,9 @@ void *player_thread(void *player)
         else
             usleep(50000);
 
+        if ( !p->bWaitAsync && GST_STATE_CHANGE_ASYNC == gst_element_get_state( p->pPipeline, NULL, NULL, 0 ) )
+            LOG4CXX_WARN(playerImplLog, "Gstreamer is unexpectedly working asynchronously");
+
         if (bus_message != NULL) {
             handle_bus_message(bus_message, p);
             gst_message_unref(bus_message);
