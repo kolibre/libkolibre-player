@@ -284,6 +284,7 @@ void PlayerControl::play()
     assert(!atEOS);
 
     player->stop();
+    delete player;
 }
 
 bool PlayerControl::enable( int argc, char **argv )
