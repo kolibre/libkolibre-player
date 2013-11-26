@@ -140,6 +140,7 @@ void PlayerControl::play()
 
     cout << "\nPlayer stopped. segments played: " << currentitem << endl;
     assert(currentitem == maxitems);
+    delete player;
 }
 
 bool PlayerControl::enable( int argc, char **argv )
