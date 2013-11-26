@@ -38,7 +38,7 @@ TESTS = codectest_wav.sh \
 
 playersignaltest_SOURCES = player_signal_test.cpp 
 playersignaltest_CPPFLAGS = -I$(top_srcdir)/src -g @LOG4CXX_LIBS@ @GLIB_CFLAGS@ @GST_CFLAGS@ @PTHREAD_CFLAGS@
-playersignaltest_LDFLAGS = -I$(top_srcdir)/src $(top_builddir)/src/libkolibre_player_la-PlayerImpl.lo @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
+playersignaltest_LDFLAGS = -L$(top_builddir)/src $(top_builddir)/src/libkolibre_player_la-PlayerImpl.lo @GST_LIBS@ @GSTCONTROLLER_LIBS@ @PTHREAD_LIBS@ @LOG4CXX_LIBS@
 
 codectest_SOURCES = codectest.cpp
 tempopitchtest_SOURCES = tempopitchtest.cpp
