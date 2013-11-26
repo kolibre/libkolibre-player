@@ -143,7 +143,10 @@ struct PlayerImpl
         *pAudiodynamic,   // Audio dynamics adjust
         *pLevel,   // Level indicator
         *pAmplify,  // Level adjust
+        *pFilter,
         *pAudiosink;
+
+    GstCaps *pFilterCaps;
 
     GstClock *pClock;
 
