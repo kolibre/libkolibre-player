@@ -181,6 +181,8 @@ PlayerImpl::PlayerImpl():
     pAudioconvert2 = NULL;
     pAudiosink = NULL;
     pQueue2 = NULL;
+    pFilter = NULL;
+    pFilterCaps = NULL;
 
     serverTimedOut = false;
     bEOSCalledAlreadyForThisFile = false;
@@ -1644,8 +1646,11 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 #ifdef ENABLE_EQUALIZER
     pEqualizer = gst_element_factory_make("equalizer-10bands", "pEqualizer");
 #endif
+
+
     pAudioconvert2 = gst_element_factory_make("audioconvert", "pAudioconvert2");
 
+    pFilterCaps = gst_caps_from_string ("audio/x-raw-int, width=16, channels=1, signed=true");
 
 #ifdef WIN32
     pAudiosink = gst_element_factory_make("directsoundsink", "pAudiosink");
@@ -1669,6 +1674,8 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
             !pLevel         ||
             !pAmplify       ||
 #endif
+            //!pFilter ||
+            !pFilterCaps ||
             !pAudiosink) goto fail;
 
 
@@ -1680,11 +1687,13 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 #ifdef ENABLE_EQUALIZER
             pEqualizer,
 #endif
-            pAudioconvert2,
+
 #ifdef ENABLE_AMPLIFY
             pLevel,
             pAmplify,
 #endif
+            pAudioconvert2,
+            //pFilter,
             pAudiosink, NULL);
 
 #ifdef ENABLE_PITCH
@@ -1727,12 +1736,15 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
 #ifdef ENABLE_EQUALIZER
                 pEqualizer,
 #endif
-                pAudioconvert2,
+
 #ifdef ENABLE_AMPLIFY
                 pLevel, pAmplify,
 #endif
-                pAudiosink, NULL)) goto fail;
+                pAudioconvert2,
+                pFilter,
+                NULL)) goto fail;
 
+    if(!gst_element_link_filtered(pAudioconvert2,pAudiosink,pFilterCaps)) goto fail;
 
     // Add a data probe
     pad = gst_element_get_pad (pAudiosink, "sink");
@@ -1756,6 +1768,7 @@ fail:
     LOG4CXX_ERROR(playerImplLog, "level:          " << (pLevel ? "OK" : "failed"));
     LOG4CXX_ERROR(playerImplLog, "amplify:        " << (pAmplify ? "OK" : "failed"));
 #endif
+    LOG4CXX_ERROR(playerImplLog, "filter:         " << (pFilter ? "OK" : "failed"));
     LOG4CXX_ERROR(playerImplLog, "audiosink:      " << (pAudiosink ? "OK" : "failed"));
 
     return NULL;
@@ -2125,6 +2138,7 @@ bool PlayerImpl::destroyPipeline()
             if(pLevel != NULL) gst_object_unref(pLevel);
             if(pAmplify != NULL) gst_object_unref(pAmplify);
 #endif
+            if(pFilter != NULL) gst_object_unref(pFilter);
             if(pAudiosink != NULL) gst_object_unref(pAudiosink);
             if(pBus != NULL) gst_object_unref(pBus);
             if(pPipeline != NULL) gst_object_unref(pAudiosink);
@@ -2185,6 +2199,8 @@ bool PlayerImpl::destroyPipeline()
     pAudioconvert2 = NULL;
     pLevel = NULL;
     pAmplify = NULL;
+    pFilter = NULL;
+    pFilterCaps = NULL;
     pAudiosink = NULL;
 
     mNumTracks = 0;
