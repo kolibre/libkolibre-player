@@ -1654,7 +1654,7 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
     //g_object_set (pAudiosink, "preroll-queue-len", (gint64)50, NULL); // playback sometimes does not start
     //g_object_set (pAudiosink, "max-lateness", (gint64)10 * GST_MSECOND, NULL); // no effect?
 #else
-    pAudiosink = gst_element_factory_make("alsasink", "pAudiosink");
+    pAudiosink = gst_element_factory_make("autoaudiosink", "pAudiosink");
 #endif
     // Check that the elements got set up
     if (!pAudioconvert1 ||
@@ -1716,7 +1716,7 @@ GstElement *PlayerImpl::setupPostprocessing(GstBin *bin)
     //g_object_set(pAudiosink, "qos", TRUE, NULL);
     //g_object_set(pAudiosink, "preroll-queue-len", 10, NULL);
     //g_object_set(pAudiosink, "max-lateness", 1500 * GST_MSECOND, NULL);
-    g_object_set(pAudiosink, "sync", FALSE, NULL);
+    //g_object_set(pAudiosink, "sync", FALSE, NULL);
     //g_object_set(pAudiosink, "provide-clock", TRUE, NULL);
 
     // Link the elements
