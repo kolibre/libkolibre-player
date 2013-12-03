@@ -127,6 +127,26 @@ AC_ARG_ENABLE(buffered-streaming,
               AC_DEFINE(BUFFERED_STREAMING, 1, [Use buffered streaming])
               )
 
+dnl -----------------------------------------------
+dnl determine if soundtouch is configured
+dnl -----------------------------------------------
+
+AC_ARG_ENABLE(soundtouch,
+              AS_HELP_STRING([--disable-soundtouch], [use soundtouch plugin [default=yes]]),
+              [],
+              AC_DEFINE(ENABLE_PITCH, 1, [Enable soundtouch])
+              )
+
+dnl -----------------------------------------------
+dnl determine if amplify is configured
+dnl -----------------------------------------------
+
+AC_ARG_ENABLE(amplify,
+              AS_HELP_STRING([--disable-amplify], [use amplify plugin [default=yes]]),
+              [],
+              AC_DEFINE(ENABLE_AMPLIFY, 1, [Enable amplify])
+              )
+
 # Checks for header files.
 AC_CHECK_HEADERS([locale.h termios.h unistd.h])
 
