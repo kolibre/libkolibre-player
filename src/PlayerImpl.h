@@ -135,6 +135,7 @@ struct PlayerImpl
         *pDecodebin,
 
         // Post processing
+        *pBin,
         *pAudioconvert1,
         *pPitch,
         *pEqualizer,
@@ -153,9 +154,11 @@ struct PlayerImpl
     //GstController *pFadeController;
     //GValue mFadeControllerVolume;
 
+    GstElement *setupPlaybinPostProcessing();
     GstElement *setupPostprocessing(GstBin *);
     GstElement *setupDatasource(GstBin *);
 
+    bool setupPlaybinPipeline();
     bool setupOGGPipeline();
     bool setupMP3Pipeline();
     bool setupAACPipeline();

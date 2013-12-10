@@ -1626,6 +1626,42 @@ void PlayerImpl::setEqualizer(GstElement *element, double bass, double treble)
 }
 #endif
 
+GstElement *PlayerImpl::setupPlaybinPostProcessing()
+{
+    GstElement *pitch, *convert, *sink;
+    GstPad *pad, *ghost_pad;
+
+    // Create the elements inside the sink bin
+    pitch = gst_element_factory_make ("pitch", "soundtouch");
+    convert = gst_element_factory_make ("audioconvert", "audioconvert");
+    sink = gst_element_factory_make ("autoaudiosink", "audiosink");
+    if (!pitch || !convert || !sink) goto fail;
+
+    // Add probes
+    pad = gst_element_get_pad (sink, "sink");
+    gst_pad_add_buffer_probe (pad, G_CALLBACK (cb_data_probe), this);
+    gst_pad_add_event_probe (pad, G_CALLBACK (cb_event_probe), this);
+    gst_object_unref (pad);
+
+    // Create the sink bin, add the elements and link them
+    pBin = gst_bin_new ("audiosinkbin");
+    gst_bin_add_many (GST_BIN (pBin), pitch, convert, sink, NULL);
+    gst_element_link_many (pitch, convert, sink, NULL);
+    pad = gst_element_get_static_pad (pitch, "sink");
+    ghost_pad = gst_ghost_pad_new ("sink", pad);
+    gst_pad_set_active (ghost_pad, TRUE);
+    gst_element_add_pad (pBin, ghost_pad);
+    gst_object_unref (pad);
+
+    return pBin;
+
+fail:
+    LOG4CXX_ERROR(playerImplLog, "pitch:          " << (pitch ? "OK" : "failed"));
+    LOG4CXX_ERROR(playerImplLog, "audioconvert:   " << (convert ? "OK" : "failed"));
+    LOG4CXX_ERROR(playerImplLog, "autoaudiosink:  " << (sink ? "OK" : "failed"));
+    return NULL;
+}
+
 /**
  * Creates an audio processing pipeline, tempo, amplify, compressor and sink elements
  *
@@ -1772,6 +1808,60 @@ fail:
     LOG4CXX_ERROR(playerImplLog, "audiosink:      " << (pAudiosink ? "OK" : "failed"));
 
     return NULL;
+}
+
+/**
+ * Creates an playbin2 pipeline
+ *
+ * @return bOk if ok
+ */
+bool PlayerImpl::setupPlaybinPipeline()
+{
+    if (pPipeline != NULL)
+    {
+        gst_element_set_state(GST_ELEMENT(pPipeline), GST_STATE_NULL);
+        if(waitStateChange() == bError) usleep(1000000);
+
+        destroyPipeline();
+    }
+
+    lockMutex(stateMutex);
+    realState = BUFFERING;
+    unlockMutex(stateMutex);
+
+    LOG4CXX_INFO(playerImplLog, "Setting up PLAYBIN2PIPE");
+
+    // Create the pipeline
+    pPipeline = gst_element_factory_make("playbin2", "pPipeline");
+    pBus = gst_element_get_bus (GST_ELEMENT (pPipeline));
+    pBin = setupPlaybinPostProcessing();
+
+    if (!pPipeline || !pBin) goto fail;
+
+    // set playbin2's audio sink to be out sink bin
+    g_object_set(pPipeline, "audio-sink", pBin, NULL);
+
+    // set uri
+    g_object_set(pPipeline, "uri", mPlayingFilename.c_str(), NULL);
+
+    LOG4CXX_DEBUG(playerImplLog, "Setting pipeline to READY");
+
+    if(gst_element_set_state (GST_ELEMENT (pPipeline), GST_STATE_PAUSED) != GST_STATE_CHANGE_FAILURE) {
+        if(waitStateChange() == bError) usleep(1000000);
+        LOG4CXX_DEBUG(playerImplLog, "Setting pipeline to READY OK");
+    } else {
+        LOG4CXX_DEBUG(playerImplLog, "Setting pipeline to READY ERROR");
+        return bError;
+    }
+
+    return bOk;
+
+fail:
+    LOG4CXX_ERROR(playerImplLog, "pipeline:       " << (pPipeline ? "OK" : "failed"));
+    LOG4CXX_ERROR(playerImplLog, "postprocessing: " << (pBin ? "OK" : "failed"));
+    LOG4CXX_ERROR(playerImplLog, "Internal error, please check your GStreamer installation.");
+    destroyPipeline();
+    return bError;
 }
 
 /**
@@ -2125,6 +2215,7 @@ bool PlayerImpl::destroyPipeline()
             if(pWavparse != NULL) gst_object_unref(pWavparse);
             if(pCddasrc != NULL) gst_object_unref(pCddasrc);
             if(pDecodebin != NULL) gst_object_unref(pDecodebin);
+            if(pBin != NULL) gst_object_unref(pBin);
             if(pAudioconvert1 != NULL) gst_object_unref(pAudioconvert1);
 #ifdef ENABLE_PITCH
             if(pPitch != NULL) gst_object_unref(pPitch);
@@ -2193,6 +2284,7 @@ bool PlayerImpl::destroyPipeline()
     pDecodebin = NULL;
 
     // Postprocessing
+    pBin = NULL;
     pAudioconvert1 = NULL;
     pPitch = NULL;
     pEqualizer = NULL;
@@ -2284,6 +2376,8 @@ bool PlayerImpl::waitStateChange()
  */
 bool PlayerImpl::setupPipeline()
 {
+    return setupPlaybinPipeline();
+
     LOG4CXX_DEBUG(playerImplLog, "Setting up correct pipeline type");
 
     // Check the file extension, decide what kind of codec to use
