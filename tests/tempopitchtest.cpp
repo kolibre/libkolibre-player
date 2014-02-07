@@ -56,8 +56,9 @@ bool PlayerControl::playerMessageSlot( Player::playerMessage message )
     {
         case Player::PLAYER_CONTINUE:
             return true;
-        case Player::PLAYER_ATEOS:
         case Player::PLAYER_ERROR:
+            assert(false);
+        case Player::PLAYER_ATEOS:
             atEOS = true;
             return true;
     }
@@ -283,6 +284,7 @@ void PlayerControl::play()
     assert(!atEOS);
 
     player->stop();
+    delete player;
 }
 
 bool PlayerControl::enable( int argc, char **argv )

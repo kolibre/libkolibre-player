@@ -96,6 +96,8 @@ void PlayerControl::play()
     // Assert that test run til end and no errors occurred!
     assert( atEOS == true );
     assert( error == false );
+
+    delete player;
 }
 
 bool PlayerControl::enable( int argc, char **argv )
