@@ -112,4 +112,3 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with libkolibre-player. If not, see <http://www.gnu.org/licenses/>.
 
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/e4126976c853700e8960ebc9713ed68c "githalytics.com")](http://githalytics.com/kolibre/libkolibre-player)
